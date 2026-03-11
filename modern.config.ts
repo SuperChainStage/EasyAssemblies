@@ -1,6 +1,18 @@
 import { appTools, defineConfig } from '@modern-js/app-tools';
 
-// https://modernjs.dev/en/configure/app/usage
 export default defineConfig({
-  plugins: [appTools()],
+  output: {
+    distPath: {
+      html: './', 
+    },
+  },
+  html: {
+    outputStructure: 'flat',
+  },
+  source: {
+    mainEntryName: 'index',
+  },
+  plugins:[
+    appTools(),
+  ],
 });
