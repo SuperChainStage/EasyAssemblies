@@ -1,3 +1,5 @@
 import { defineRuntimeConfig } from '@modern-js/runtime';
 
-export default defineRuntimeConfig({});
+export default defineRuntimeConfig({
+  router: true,
+});
