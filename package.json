@@ -1,5 +1,5 @@
 {
-  "name": "EasyAssemblies",
+  "name": "easy_assemblies",
   "version": "0.1.0",
   "scripts": {
     "dev": "modern dev",
