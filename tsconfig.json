@@ -3,6 +3,8 @@
   "compilerOptions": {
     "declaration": false,
     "jsx": "preserve",
+    "moduleResolution": "bundler",
+    "module": "ESNext",
     "baseUrl": "./",
     "paths": {
       "@/*": ["./src/*"],
