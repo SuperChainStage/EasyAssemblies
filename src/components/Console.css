@@ -1,0 +1,95 @@
+.playground-console {
+  display: flex;
+  flex-direction: column;
+  background-color: #0d0d0d;
+  border-top: 1px solid #333;
+  width: 100%;
+  max-height: 0;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.playground-console--open {
+  max-height: 33vh;
+}
+
+.playground-console-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #333;
+  color: #ccc;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.playground-console-header-btn {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.playground-console-header-btn:hover {
+  color: #fff;
+}
+
+.playground-console-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Menlo', 'Monaco', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #e2e8f0;
+}
+
+.playground-console-line {
+  margin-bottom: 4px;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+/* Deploy Info row */
+.playground-deploy-info {
+  border-top: 1px solid #333;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #ccc;
+  background: #111;
+  flex-shrink: 0;
+}
+
+.playground-deploy-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.playground-deploy-label {
+  color: #888;
+  width: 70px;
+}
+
+.playground-deploy-value {
+  color: #4ade80;
+  font-family: monospace;
+}
+
+.playground-deploy-link {
+  color: #60a5fa;
+  text-decoration: none;
+  font-size: 11px;
+}
+.playground-deploy-link:hover {
+  text-decoration: underline;
+}

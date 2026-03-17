@@ -2,11 +2,13 @@ import { useState, useMemo } from 'react';
 import { useMoveBuilder } from '@/hooks/useMoveBuilder';
 import { FileTree, buildFileTree } from '@/components/FileTree';
 import { CodeEditor } from '@/components/CodeEditor';
+import { Console } from '@/components/Console';
 
 export default function PlaygroundPage() {
   // Core state management
   const [files, setFiles] = useState<Record<string, string>>({});
   const [selectedPath, setSelectedPath] = useState<string>('');
+  const [showLogs, setShowLogs] = useState<boolean>(true);
 
   // Compiler & Deployment Hook
   const {
@@ -71,9 +73,15 @@ export default function PlaygroundPage() {
           <button
             onClick={onDeploy}
             disabled={isPublishing || !buildOk}
-            style={{ cursor: isPublishing || !buildOk ? 'not-allowed' : 'pointer' }}
+            style={{ cursor: isPublishing || !buildOk ? 'not-allowed' : 'pointer', marginRight: '8px' }}
           >
             {isPublishing ? 'Publishing...' : 'Deploy'}
+          </button>
+          <button
+            onClick={() => setShowLogs(!showLogs)}
+            style={{ cursor: 'pointer' }}
+          >
+            Console
           </button>
         </div>
         <div style={{ flex: 1, overflow: 'auto' }}>
@@ -103,23 +111,13 @@ export default function PlaygroundPage() {
           )}
         </div>
 
-        {/* Console Area */}
-        <div
-          style={{
-            height: '250px',
-            borderTop: '1px solid #333',
-            backgroundColor: '#111',
-            padding: '12px',
-            overflow: 'auto',
-          }}
-        >
-          <p style={{ color: '#888', fontSize: '13px', margin: '0 0 8px 0' }}>/* Console Logger Placeholder */</p>
-          {logs.map((log, i) => (
-            <div key={i} style={{ fontSize: '12px', color: '#aaa', fontFamily: 'monospace' }}>
-              {log}
-            </div>
-          ))}
-        </div>
+        <Console
+          isOpen={showLogs}
+          onToggle={() => setShowLogs(!showLogs)}
+          logs={logs}
+          packageId={packageId}
+          txDigest={txDigest}
+        />
       </div>
     </div>
   );
