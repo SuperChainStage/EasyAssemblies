@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useMoveBuilder } from '@/hooks/useMoveBuilder';
+import { FileTree, buildFileTree } from '@/components/FileTree';
 
 export default function PlaygroundPage() {
   // Core state management
@@ -19,7 +20,10 @@ export default function PlaygroundPage() {
     onDeploy,
   } = useMoveBuilder(files);
 
-  // TODO: Tasks 1.4, 1.5, 1.6 will populate these areas
+  // Build file tree from flat paths
+  const fileTree = useMemo(() => buildFileTree(Object.keys(files)), [files]);
+
+  // TODO: Tasks 1.5, 1.6 will populate editor and console
   return (
     <div
       style={{
@@ -61,11 +65,12 @@ export default function PlaygroundPage() {
             {isPublishing ? 'Publishing...' : 'Deploy'}
           </button>
         </div>
-        <div style={{ flex: 1, padding: '16px', overflow: 'auto' }}>
-          <p style={{ color: '#888', fontSize: '13px' }}>/* FileTree Placeholder */</p>
-          <pre style={{ fontSize: '11px', color: '#666', marginTop: '10px' }}>
-            {selectedPath || 'No file selected'}
-          </pre>
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          <FileTree
+            tree={fileTree}
+            selectedPath={selectedPath}
+            onSelect={setSelectedPath}
+          />
         </div>
       </div>
 
