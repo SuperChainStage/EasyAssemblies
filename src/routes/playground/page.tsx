@@ -3,6 +3,7 @@ import { useMoveBuilder } from '@/hooks/useMoveBuilder';
 import { FileTree, buildFileTree } from '@/components/FileTree';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Console } from '@/components/Console';
+import { ActionBar } from '@/components/ActionBar';
 
 export default function PlaygroundPage() {
   // Core state management
@@ -63,26 +64,6 @@ export default function PlaygroundPage() {
           <h2 style={{ fontSize: '14px', margin: '0 0 12px 0', color: '#ccc' }}>
             Assembly Forge
           </h2>
-          <button
-            onClick={onBuild}
-            disabled={busy}
-            style={{ marginRight: '8px', cursor: busy ? 'not-allowed' : 'pointer' }}
-          >
-            {busy ? 'Building...' : 'Build'}
-          </button>
-          <button
-            onClick={onDeploy}
-            disabled={isPublishing || !buildOk}
-            style={{ cursor: isPublishing || !buildOk ? 'not-allowed' : 'pointer', marginRight: '8px' }}
-          >
-            {isPublishing ? 'Publishing...' : 'Deploy'}
-          </button>
-          <button
-            onClick={() => setShowLogs(!showLogs)}
-            style={{ cursor: 'pointer' }}
-          >
-            Console
-          </button>
         </div>
         <div style={{ flex: 1, overflow: 'auto' }}>
           <FileTree
@@ -117,6 +98,16 @@ export default function PlaygroundPage() {
           logs={logs}
           packageId={packageId}
           txDigest={txDigest}
+        />
+
+        <ActionBar
+          showLogs={showLogs}
+          setShowLogs={setShowLogs}
+          onBuild={onBuild}
+          onDeploy={onDeploy}
+          busy={busy}
+          isPublishing={isPublishing}
+          buildOk={buildOk}
         />
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   useCurrentAccount,
+  useSuiClientContext,
   useSuiClient,
   useSignAndExecuteTransaction,
 } from '@mysten/dapp-kit';
@@ -36,7 +37,7 @@ export function useMoveBuilder(files: Record<string, string>) {
   const suiClient = useSuiClient();
   const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
 
-  const network = 'testnet';
+  const { network } = useSuiClientContext();
 
   const addLog = useCallback((msg: string) => {
     const ts = new Date().toLocaleTimeString();
@@ -94,7 +95,7 @@ export function useMoveBuilder(files: Record<string, string>) {
       const resolved = await resolveDependencies({
         files,
         ansiColor: true,
-        network,
+        network: network as 'devnet' | 'testnet' | 'mainnet',
       });
 
       const sourceFiles = Object.fromEntries(
@@ -110,7 +111,7 @@ export function useMoveBuilder(files: Record<string, string>) {
         resolvedDependencies: resolved,
         silenceWarnings: false,
         ansiColor: true,
-        network,
+        network: network as 'devnet' | 'testnet' | 'mainnet',
         onProgress: (ev: any) => {
           switch (ev.type) {
             case 'resolve_dep':
