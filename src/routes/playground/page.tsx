@@ -1,4 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from '@modern-js/runtime/router';
+import { getTemplate } from '@/templates';
 import { useMoveBuilder } from '@/hooks/useMoveBuilder';
 import { FileTree, buildFileTree } from '@/components/FileTree';
 import { CodeEditor } from '@/components/CodeEditor';
@@ -10,6 +12,25 @@ export default function PlaygroundPage() {
   const [files, setFiles] = useState<Record<string, string>>({});
   const [selectedPath, setSelectedPath] = useState<string>('');
   const [showLogs, setShowLogs] = useState<boolean>(true);
+  const [searchParams] = useSearchParams();
+  const templateId = searchParams.get('template');
+
+  useEffect(() => {
+    if (!templateId) return;
+    let didCancel = false;
+    const fetchTemplate = async () => {
+      const tpl = getTemplate(templateId);
+      if (tpl) {
+        const fileMap = await tpl.files();
+        if (didCancel) return;
+        setFiles(fileMap);
+        const firstMove = Object.keys(fileMap).find((f) => f.endsWith('.move'));
+        setSelectedPath(firstMove ?? Object.keys(fileMap)[0] ?? '');
+      }
+    };
+    fetchTemplate();
+    return () => { didCancel = true; };
+  }, [templateId]);
 
   // Compiler & Deployment Hook
   const {
@@ -42,29 +63,43 @@ export default function PlaygroundPage() {
     <div
       style={{
         display: 'flex',
+        flexDirection: 'column',
         height: '100vh',
         width: '100%',
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#1E1E1E',
         color: '#fff',
         overflow: 'hidden',
         fontFamily: "'Inter', sans-serif",
       }}
     >
-      {/* Sidebar: Actions + FileTree (Task 1.4) */}
-      <div
-        style={{
-          width: '270px',
-          borderRight: '1px solid #333',
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: '#252526',
-        }}
-      >
-        <div style={{ padding: '16px', borderBottom: '1px solid #333' }}>
-          <h2 style={{ fontSize: '14px', margin: '0 0 12px 0', color: '#ccc' }}>
-            Assembly Forge
-          </h2>
-        </div>
+      {/* Navbar */}
+      <div style={{ height: '48px', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', padding: '0 16px', backgroundColor: '#252526', flexShrink: 0 }}>
+        <h1 style={{ fontSize: '15px', fontWeight: 600, margin: 0, color: '#ccc' }}>Assembly Forge</h1>
+        {templateId ? (
+          <span style={{ marginLeft: '16px', fontSize: '12px', color: '#888', backgroundColor: '#111', padding: '4px 8px', borderRadius: '4px', border: '1px solid #333' }}>
+            Template: {getTemplate(templateId)?.label ?? templateId}
+          </span>
+        ) : (
+          <span style={{ marginLeft: '16px', fontSize: '12px', color: '#888' }}>
+            No template selected
+          </span>
+        )}
+      </div>
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+        {/* Sidebar: FileTree */}
+        <div
+          style={{
+            width: '240px',
+            borderRight: '1px solid #333',
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: '#252526',
+          }}
+        >
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid #333', color: '#888', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Explorer
+          </div>
         <div style={{ flex: 1, overflow: 'auto' }}>
           <FileTree
             tree={fileTree}
@@ -110,6 +145,7 @@ export default function PlaygroundPage() {
           buildOk={buildOk}
         />
       </div>
+    </div>
     </div>
   );
 }
