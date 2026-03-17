@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useMoveBuilder } from '@/hooks/useMoveBuilder';
 import { FileTree, buildFileTree } from '@/components/FileTree';
+import { CodeEditor } from '@/components/CodeEditor';
 
 export default function PlaygroundPage() {
   // Core state management
@@ -23,7 +24,17 @@ export default function PlaygroundPage() {
   // Build file tree from flat paths
   const fileTree = useMemo(() => buildFileTree(Object.keys(files)), [files]);
 
-  // TODO: Tasks 1.5, 1.6 will populate editor and console
+  // Handle editor changes
+  const handleEditorChange = (value: string) => {
+    if (selectedPath) {
+      setFiles((prev) => ({
+        ...prev,
+        [selectedPath]: value,
+      }));
+    }
+  };
+
+  // TODO: Tasks 1.6 will populate console
   return (
     <div
       style={{
@@ -77,8 +88,19 @@ export default function PlaygroundPage() {
       {/* Main Column: Editor (Task 1.5) + Console (Task 1.6) */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {/* Editor Area */}
-        <div style={{ flex: 1, padding: '16px', backgroundColor: '#1e1e1e' }}>
-          <p style={{ color: '#888', fontSize: '13px' }}>/* CodeEditor Placeholder */</p>
+        <div style={{ flex: 1, backgroundColor: '#1E1E1E', overflow: 'hidden' }}>
+          {selectedPath ? (
+            <CodeEditor
+              value={files[selectedPath] ?? ''}
+              path={selectedPath}
+              onChange={handleEditorChange}
+              readOnly={busy || isPublishing}
+            />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#666', fontSize: '14px' }}>
+              Select a file to edit
+            </div>
+          )}
         </div>
 
         {/* Console Area */}
