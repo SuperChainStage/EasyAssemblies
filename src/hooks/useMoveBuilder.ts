@@ -9,7 +9,13 @@ import {
 import { Transaction } from '@mysten/sui/transactions';
 import { fromBase64 } from '@mysten/sui/utils';
 
-import { buildMovePackage, getSuiMoveVersion, initMoveCompiler, resolveDependencies } from '@zktx.io/sui-move-builder/lite';
+import {
+  buildMovePackage,
+  getSuiMoveVersion,
+  initMoveCompiler,
+  resolveDependencies,
+} from '@zktx.io/sui-move-builder/lite';
+import type { ResolvedDependencies } from '@zktx.io/sui-move-builder/lite';
 
 export type BuildResult = Awaited<ReturnType<typeof buildMovePackage>>;
 export type BuildSuccess = BuildResult & {
@@ -20,6 +26,102 @@ export type BuildSuccess = BuildResult & {
 };
 
 const MAX_LOG_LINES = 300;
+const UNSUPPORTED_CHARACTER_TRANSFER_CHECK =
+  /let is_character =[\s\S]*?assert!\(!is_character, ECharacterTransfer\);/;
+const COMPATIBLE_CHARACTER_TRANSFER_CHECK = [
+  'let is_character = false;',
+  '    assert!(!is_character, ECharacterTransfer);',
+].join('\n');
+
+type ResolvedDependencySnapshot = {
+  name?: string;
+  files?: Record<string, string>;
+};
+
+function sanitizeDependencySnapshot(
+  snapshot: ResolvedDependencySnapshot,
+): boolean {
+  if (
+    !snapshot.name ||
+    snapshot.name.toLowerCase() !== 'world' ||
+    !snapshot.files
+  ) {
+    return false;
+  }
+
+  const packagePrefix = `dependencies/${snapshot.name}/`;
+  let changed = false;
+
+  for (const [filePath, content] of Object.entries(snapshot.files)) {
+    if (!filePath.startsWith(packagePrefix)) {
+      continue;
+    }
+
+    const relativePath = filePath.slice(packagePrefix.length);
+    if (/^tests\//i.test(relativePath)) {
+      delete snapshot.files[filePath];
+      changed = true;
+      continue;
+    }
+
+    if (
+      /access_control\.move$/i.test(relativePath) &&
+      UNSUPPORTED_CHARACTER_TRANSFER_CHECK.test(content)
+    ) {
+      snapshot.files[filePath] = content.replace(
+        UNSUPPORTED_CHARACTER_TRANSFER_CHECK,
+        COMPATIBLE_CHARACTER_TRANSFER_CHECK,
+      );
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
+function sanitizeResolvedDependencies(
+  resolved: ResolvedDependencies,
+  compilerVersion: string | null,
+): { resolved: ResolvedDependencies; changed: boolean } {
+  if (compilerVersion !== '1.63.3') {
+    return { resolved, changed: false };
+  }
+
+  let changed = false;
+
+  const sanitizeJsonArray = (value: string): string => {
+    try {
+      const parsed = JSON.parse(value) as ResolvedDependencySnapshot[];
+      if (!Array.isArray(parsed)) {
+        return value;
+      }
+
+      let localChanged = false;
+      for (const snapshot of parsed) {
+        if (sanitizeDependencySnapshot(snapshot)) {
+          localChanged = true;
+        }
+      }
+
+      if (!localChanged) {
+        return value;
+      }
+
+      changed = true;
+      return JSON.stringify(parsed);
+    } catch {
+      return value;
+    }
+  };
+
+  const nextResolved: ResolvedDependencies = {
+    ...resolved,
+    dependencies: sanitizeJsonArray(resolved.dependencies),
+    lockfileDependencies: sanitizeJsonArray(resolved.lockfileDependencies),
+  };
+
+  return { resolved: nextResolved, changed };
+}
 
 export function useMoveBuilder(files: Record<string, string>) {
   const [busy, setBusy] = useState(false);
@@ -35,13 +137,14 @@ export function useMoveBuilder(files: Record<string, string>) {
 
   const account = useCurrentAccount();
   const suiClient = useSuiClient();
-  const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+  const { mutateAsync: signAndExecuteTransaction } =
+    useSignAndExecuteTransaction();
 
   const { network } = useSuiClientContext();
 
   const addLog = useCallback((msg: string) => {
     const ts = new Date().toLocaleTimeString();
-    setLogs((prev) => {
+    setLogs(prev => {
       const next = [...prev, `[${ts}] ${msg}`];
       return next.length > MAX_LOG_LINES
         ? next.slice(next.length - MAX_LOG_LINES)
@@ -65,7 +168,7 @@ export function useMoveBuilder(files: Record<string, string>) {
         const v = versionRef.current ?? (await getSuiMoveVersion());
         versionRef.current = v;
         const ts = new Date().toLocaleTimeString();
-        setLogs((prev) => [...prev, `[${ts}] 📌 Compiler ready — ${v}`]);
+        setLogs(prev => [...prev, `[${ts}] 📌 Compiler ready — ${v}`]);
       } catch {
         /* silent */
       }
@@ -90,6 +193,8 @@ export function useMoveBuilder(files: Record<string, string>) {
         compilerRef.current = initMoveCompiler();
       }
       await compilerRef.current;
+      const compilerVersion = versionRef.current ?? (await getSuiMoveVersion());
+      versionRef.current = compilerVersion;
 
       addLog('📦 Resolving dependencies…');
       const resolved = await resolveDependencies({
@@ -97,6 +202,12 @@ export function useMoveBuilder(files: Record<string, string>) {
         ansiColor: true,
         network: network as 'devnet' | 'testnet' | 'mainnet',
       });
+      const sanitized = sanitizeResolvedDependencies(resolved, compilerVersion);
+      if (sanitized.changed) {
+        addLog(
+          `⚠️ Applied world v0.0.18 compatibility patch for browser compiler ${compilerVersion}`,
+        );
+      }
 
       const sourceFiles = Object.fromEntries(
         Object.entries(files).filter(
@@ -108,7 +219,7 @@ export function useMoveBuilder(files: Record<string, string>) {
 
       const result = await buildMovePackage({
         files: sourceFiles,
-        resolvedDependencies: resolved,
+        resolvedDependencies: sanitized.resolved,
         silenceWarnings: false,
         ansiColor: true,
         network: network as 'devnet' | 'testnet' | 'mainnet',
@@ -140,7 +251,8 @@ export function useMoveBuilder(files: Record<string, string>) {
         addLog(`✅ Build succeeded in ${elapsed}s`);
         addLog(`Digest: ${success.digest ?? '-'}`);
         addLog(`Modules: ${success.modules?.length ?? 0}`);
-        if ('warnings' in success && (success as any).warnings) addLog(`⚠️ ${(success as any).warnings}`);
+        if ('warnings' in success && (success as any).warnings)
+          addLog(`⚠️ ${(success as any).warnings}`);
         setBuildOk(true);
         setCompiled(result);
       }
@@ -185,13 +297,16 @@ export function useMoveBuilder(files: Record<string, string>) {
       try {
         const txb = await suiClient.waitForTransaction({
           digest,
-          options: { showEffects: true, showObjectChanges: true }
+          options: { showEffects: true, showObjectChanges: true },
         });
 
         const createdPkgInfo = (txb.objectChanges || []).find(
-          (o: any) => o.type === 'published'
+          (o: any) => o.type === 'published',
         );
-        const createdPkg = createdPkgInfo && 'packageId' in createdPkgInfo ? (createdPkgInfo as any).packageId : undefined;
+        const createdPkg =
+          createdPkgInfo && 'packageId' in createdPkgInfo
+            ? (createdPkgInfo as any).packageId
+            : undefined;
         if (createdPkg) {
           addLog(`📦 Package ID: ${createdPkg}`);
           setPackageId(createdPkg);
