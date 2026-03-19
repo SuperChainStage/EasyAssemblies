@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from '@modern-js/runtime/router';
+import { useSearchParams, useNavigate } from '@modern-js/runtime/router';
 import { getTemplate } from '@/templates';
 import { useMoveBuilder } from '@/hooks/useMoveBuilder';
 import { FileTree, buildFileTree } from '@/components/FileTree';
@@ -13,7 +13,15 @@ export default function PlaygroundPage() {
   const [selectedPath, setSelectedPath] = useState<string>('');
   const [showLogs, setShowLogs] = useState<boolean>(true);
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const templateId = searchParams.get('template');
+
+  // Redirect to home if no template or template not found
+  useEffect(() => {
+    if (!templateId || !getTemplate(templateId)) {
+      navigate('/', { replace: true });
+    }
+  }, [templateId, navigate]);
 
   useEffect(() => {
     if (!templateId) return;
@@ -73,15 +81,18 @@ export default function PlaygroundPage() {
       }}
     >
       {/* Navbar */}
-      <div style={{ height: '48px', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', padding: '0 16px', backgroundColor: '#252526', flexShrink: 0 }}>
+      <div style={{ height: '48px', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '12px', backgroundColor: '#252526', flexShrink: 0 }}>
+        <button
+          onClick={() => navigate('/')}
+          style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '18px', lineHeight: 1, padding: '0 4px' }}
+          title="Back to templates"
+        >
+          ←
+        </button>
         <h1 style={{ fontSize: '15px', fontWeight: 600, margin: 0, color: '#ccc' }}>Assembly Forge</h1>
-        {templateId ? (
-          <span style={{ marginLeft: '16px', fontSize: '12px', color: '#888', backgroundColor: '#111', padding: '4px 8px', borderRadius: '4px', border: '1px solid #333' }}>
-            Template: {getTemplate(templateId)?.label ?? templateId}
-          </span>
-        ) : (
-          <span style={{ marginLeft: '16px', fontSize: '12px', color: '#888' }}>
-            No template selected
+        {templateId && getTemplate(templateId) && (
+          <span style={{ fontSize: '12px', color: '#888', backgroundColor: '#111', padding: '4px 8px', borderRadius: '4px', border: '1px solid #333' }}>
+            {getTemplate(templateId)!.label}
           </span>
         )}
       </div>
