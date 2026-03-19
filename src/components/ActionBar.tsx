@@ -1,5 +1,13 @@
-import React from 'react';
-import { ConnectModal, useCurrentAccount, useSuiClientContext } from '@mysten/dapp-kit';
+import {
+  DEPLOYMENT_TARGET_OPTIONS,
+  type DeploymentTargetId,
+} from '@/config/constants';
+import {
+  ConnectModal,
+  useCurrentAccount,
+  useSuiClientContext,
+} from '@mysten/dapp-kit';
+import type React from 'react';
 import './ActionBar.css';
 
 export interface ActionBarProps {
@@ -25,7 +33,7 @@ export function ActionBar({
   const { network, selectNetwork } = useSuiClientContext();
 
   const handleNetworkChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextNetwork = e.target.value;
+    const nextNetwork = e.target.value as DeploymentTargetId;
     selectNetwork(nextNetwork);
     localStorage.setItem('playmove_network', nextNetwork);
   };
@@ -33,6 +41,7 @@ export function ActionBar({
   return (
     <div className="playground-actions">
       <button
+        type="button"
         className={`playground-btn playground-btn--toggle ${showLogs ? 'active' : ''}`}
         onClick={() => setShowLogs(!showLogs)}
         title={showLogs ? 'Hide console' : 'Show console'}
@@ -48,12 +57,15 @@ export function ActionBar({
         onChange={handleNetworkChange}
         disabled={busy || isPublishing}
       >
-        <option value="devnet">Devnet</option>
-        <option value="testnet">Testnet</option>
-        <option value="mainnet">Mainnet</option>
+        {DEPLOYMENT_TARGET_OPTIONS.map(target => (
+          <option key={target.id} value={target.id}>
+            {target.label}
+          </option>
+        ))}
       </select>
 
       <button
+        type="button"
         className="playground-btn playground-btn--build"
         onClick={onBuild}
         disabled={busy}
@@ -63,6 +75,7 @@ export function ActionBar({
 
       {account ? (
         <button
+          type="button"
           className="playground-btn playground-btn--deploy"
           onClick={onDeploy}
           disabled={!buildOk || isPublishing}
@@ -72,7 +85,10 @@ export function ActionBar({
       ) : (
         <ConnectModal
           trigger={
-            <button className="playground-btn playground-btn--deploy">
+            <button
+              type="button"
+              className="playground-btn playground-btn--deploy"
+            >
               Connect Wallet
             </button>
           }

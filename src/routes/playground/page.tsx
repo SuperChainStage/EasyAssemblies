@@ -1,11 +1,12 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams, useNavigate } from '@modern-js/runtime/router';
-import { getTemplate } from '@/templates';
-import { useMoveBuilder } from '@/hooks/useMoveBuilder';
-import { FileTree, buildFileTree } from '@/components/FileTree';
+import { ActionBar } from '@/components/ActionBar';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Console } from '@/components/Console';
-import { ActionBar } from '@/components/ActionBar';
+import { FileTree, buildFileTree } from '@/components/FileTree';
+import { useNetworkVariable } from '@/config/dapp-kit';
+import { useMoveBuilder } from '@/hooks/useMoveBuilder';
+import { getTemplate } from '@/templates';
+import { useNavigate, useSearchParams } from '@modern-js/runtime/router';
+import { useEffect, useMemo, useState } from 'react';
 
 export default function PlaygroundPage() {
   // Core state management
@@ -15,6 +16,7 @@ export default function PlaygroundPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const templateId = searchParams.get('template');
+  const explorerBaseUrl = useNetworkVariable('explorerBaseUrl');
 
   // Redirect to home if no template or template not found
   useEffect(() => {
@@ -32,12 +34,14 @@ export default function PlaygroundPage() {
         const fileMap = await tpl.files();
         if (didCancel) return;
         setFiles(fileMap);
-        const firstMove = Object.keys(fileMap).find((f) => f.endsWith('.move'));
+        const firstMove = Object.keys(fileMap).find(f => f.endsWith('.move'));
         setSelectedPath(firstMove ?? Object.keys(fileMap)[0] ?? '');
       }
     };
     fetchTemplate();
-    return () => { didCancel = true; };
+    return () => {
+      didCancel = true;
+    };
   }, [templateId]);
 
   // Compiler & Deployment Hook
@@ -59,7 +63,7 @@ export default function PlaygroundPage() {
   // Handle editor changes
   const handleEditorChange = (value: string) => {
     if (selectedPath) {
-      setFiles((prev) => ({
+      setFiles(prev => ({
         ...prev,
         [selectedPath]: value,
       }));
@@ -81,23 +85,68 @@ export default function PlaygroundPage() {
       }}
     >
       {/* Navbar */}
-      <div style={{ height: '48px', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '12px', backgroundColor: '#252526', flexShrink: 0 }}>
+      <div
+        style={{
+          height: '48px',
+          borderBottom: '1px solid #333',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 16px',
+          gap: '12px',
+          backgroundColor: '#252526',
+          flexShrink: 0,
+        }}
+      >
         <button
+          type="button"
           onClick={() => navigate('/')}
-          style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '18px', lineHeight: 1, padding: '0 4px' }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#666',
+            cursor: 'pointer',
+            fontSize: '18px',
+            lineHeight: 1,
+            padding: '0 4px',
+          }}
           title="Back to templates"
         >
           ←
         </button>
-        <h1 style={{ fontSize: '15px', fontWeight: 600, margin: 0, color: '#ccc' }}>Assembly Forge</h1>
+        <h1
+          style={{
+            fontSize: '15px',
+            fontWeight: 600,
+            margin: 0,
+            color: '#ccc',
+          }}
+        >
+          Assembly Forge
+        </h1>
         {templateId && getTemplate(templateId) && (
-          <span style={{ fontSize: '12px', color: '#888', backgroundColor: '#111', padding: '4px 8px', borderRadius: '4px', border: '1px solid #333' }}>
-            {getTemplate(templateId)!.label}
+          <span
+            style={{
+              fontSize: '12px',
+              color: '#888',
+              backgroundColor: '#111',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              border: '1px solid #333',
+            }}
+          >
+            {getTemplate(templateId)?.label}
           </span>
         )}
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'row',
+          overflow: 'hidden',
+        }}
+      >
         {/* Sidebar: FileTree */}
         <div
           style={{
@@ -108,55 +157,76 @@ export default function PlaygroundPage() {
             backgroundColor: '#252526',
           }}
         >
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid #333', color: '#888', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div
+            style={{
+              padding: '12px 16px',
+              borderBottom: '1px solid #333',
+              color: '#888',
+              fontSize: '12px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
             Explorer
           </div>
-        <div style={{ flex: 1, overflow: 'auto' }}>
-          <FileTree
-            tree={fileTree}
-            selectedPath={selectedPath}
-            onSelect={setSelectedPath}
+          <div style={{ flex: 1, overflow: 'auto' }}>
+            <FileTree
+              tree={fileTree}
+              selectedPath={selectedPath}
+              onSelect={setSelectedPath}
+            />
+          </div>
+        </div>
+
+        {/* Main Column: Editor (Task 1.5) + Console (Task 1.6) */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {/* Editor Area */}
+          <div
+            style={{ flex: 1, backgroundColor: '#1E1E1E', overflow: 'hidden' }}
+          >
+            {selectedPath ? (
+              <CodeEditor
+                value={files[selectedPath] ?? ''}
+                path={selectedPath}
+                onChange={handleEditorChange}
+                readOnly={busy || isPublishing}
+              />
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
+                  color: '#666',
+                  fontSize: '14px',
+                }}
+              >
+                Select a file to edit
+              </div>
+            )}
+          </div>
+
+          <Console
+            isOpen={showLogs}
+            onToggle={() => setShowLogs(!showLogs)}
+            logs={logs}
+            packageId={packageId}
+            txDigest={txDigest}
+            explorerBaseUrl={explorerBaseUrl}
+          />
+
+          <ActionBar
+            showLogs={showLogs}
+            setShowLogs={setShowLogs}
+            onBuild={onBuild}
+            onDeploy={onDeploy}
+            busy={busy}
+            isPublishing={isPublishing}
+            buildOk={buildOk}
           />
         </div>
       </div>
-
-      {/* Main Column: Editor (Task 1.5) + Console (Task 1.6) */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* Editor Area */}
-        <div style={{ flex: 1, backgroundColor: '#1E1E1E', overflow: 'hidden' }}>
-          {selectedPath ? (
-            <CodeEditor
-              value={files[selectedPath] ?? ''}
-              path={selectedPath}
-              onChange={handleEditorChange}
-              readOnly={busy || isPublishing}
-            />
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#666', fontSize: '14px' }}>
-              Select a file to edit
-            </div>
-          )}
-        </div>
-
-        <Console
-          isOpen={showLogs}
-          onToggle={() => setShowLogs(!showLogs)}
-          logs={logs}
-          packageId={packageId}
-          txDigest={txDigest}
-        />
-
-        <ActionBar
-          showLogs={showLogs}
-          setShowLogs={setShowLogs}
-          onBuild={onBuild}
-          onDeploy={onDeploy}
-          busy={busy}
-          isPublishing={isPublishing}
-          buildOk={buildOk}
-        />
-      </div>
-    </div>
     </div>
   );
 }

@@ -1,18 +1,19 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   useCurrentAccount,
-  useSuiClientContext,
-  useSuiClient,
   useSignAndExecuteTransaction,
+  useSuiClient,
 } from '@mysten/dapp-kit';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Transaction } from '@mysten/sui/transactions';
 import { fromBase64 } from '@mysten/sui/utils';
 
 import {
-  WORLD_PACKAGE_REFERENCES_BY_NETWORK,
+  WORLD_CONTRACTS_GIT_URL,
+  WORLD_CONTRACTS_SUBDIRECTORY,
   type WorldPackageReference,
 } from '@/config/constants';
+import { useNetworkVariables } from '@/config/dapp-kit';
 import {
   buildMovePackage,
   getSuiMoveVersion,
@@ -42,6 +43,22 @@ type ResolvedDependencySnapshot = {
   files?: Record<string, string>;
 };
 
+type BuildLogProgressEvent = {
+  type: 'resolve_dep' | 'resolve_complete' | 'compile_complete' | string;
+  current?: number;
+  total?: number;
+  name?: string;
+  source?: string;
+  count?: number;
+};
+
+type BuildSuccessWithWarnings = BuildSuccess & {
+  warnings?: string;
+};
+
+const WORLD_DEPENDENCY_LINE_PATTERN =
+  /^\s*world\s*=\s*\{(?=.*git\s*=\s*"https:\/\/github\.com\/evefrontier\/world-contracts\.git")(?=.*subdir\s*=\s*"contracts\/world")(?=.*rev\s*=\s*"[^"]+").*\}\s*$/m;
+
 function moveTomlDeclaresWorldDependency(
   moveToml: string | undefined,
 ): boolean {
@@ -52,6 +69,20 @@ function moveTomlDeclaresWorldDependency(
 
 function isSectionHeader(line: string): boolean {
   return /^\[[^\]]+\]$/.test(line.trim());
+}
+
+function rewriteMoveTomlForTargetWorldDependency(
+  moveToml: string,
+  sourceVersionTag: string,
+): string {
+  if (!WORLD_DEPENDENCY_LINE_PATTERN.test(moveToml)) {
+    return moveToml;
+  }
+
+  return moveToml.replace(
+    WORLD_DEPENDENCY_LINE_PATTERN,
+    `world = { git = "${WORLD_CONTRACTS_GIT_URL}", subdir = "${WORLD_CONTRACTS_SUBDIRECTORY}", rev = "${sourceVersionTag}" }`,
+  );
 }
 
 function rewriteMoveTomlForLocalWorldDependency(
@@ -382,13 +413,20 @@ export function useMoveBuilder(files: Record<string, string>) {
 
   const compilerRef = useRef<Promise<void> | null>(null);
   const versionRef = useRef<string | null>(null);
+  const previousTargetRef = useRef<string | null>(null);
 
   const account = useCurrentAccount();
   const suiClient = useSuiClient();
   const { mutateAsync: signAndExecuteTransaction } =
     useSignAndExecuteTransaction();
 
-  const { network } = useSuiClientContext();
+  const {
+    targetId,
+    environmentLabel,
+    compileNetwork,
+    walletChain,
+    worldPackageReference,
+  } = useNetworkVariables();
 
   const addLog = useCallback((msg: string) => {
     const ts = new Date().toLocaleTimeString();
@@ -426,9 +464,29 @@ export function useMoveBuilder(files: Record<string, string>) {
     };
   }, []);
 
+  useEffect(() => {
+    if (
+      previousTargetRef.current !== null &&
+      previousTargetRef.current !== targetId
+    ) {
+      const ts = new Date().toLocaleTimeString();
+      setLogs(prev => [
+        ...prev,
+        `[${ts}] 🎯 Target changed to ${environmentLabel} (${targetId}); rebuild required`,
+      ]);
+      setBuildOk(null);
+      setCompiled(null);
+      setPackageId('');
+      setTxDigest('');
+    }
+
+    previousTargetRef.current = targetId;
+  }, [environmentLabel, targetId]);
+
   const onBuild = async () => {
     addLog('── ── ── ── ──');
     addLog('🚀 Build started');
+    addLog(`🎯 Target: ${environmentLabel} (${targetId})`);
     setBuildOk(null);
     setCompiled(null);
     setPackageId('');
@@ -444,11 +502,28 @@ export function useMoveBuilder(files: Record<string, string>) {
       const compilerVersion = versionRef.current ?? (await getSuiMoveVersion());
       versionRef.current = compilerVersion;
 
+      const targetMoveToml = rewriteMoveTomlForTargetWorldDependency(
+        files['Move.toml'] ?? '',
+        worldPackageReference.sourceVersionTag,
+      );
+      const preparedFiles =
+        targetMoveToml === (files['Move.toml'] ?? '')
+          ? files
+          : {
+              ...files,
+              'Move.toml': targetMoveToml,
+            };
+      if (preparedFiles !== files) {
+        addLog(
+          `📦 Target ${environmentLabel} uses world source ${worldPackageReference.sourceVersionTag}`,
+        );
+      }
+
       addLog('📦 Resolving dependencies…');
       const resolved = await resolveDependencies({
-        files,
+        files: preparedFiles,
         ansiColor: true,
-        network: network as 'devnet' | 'testnet' | 'mainnet',
+        network: compileNetwork,
       });
       const sanitized = sanitizeResolvedDependencies(resolved, compilerVersion);
       if (sanitized.changed) {
@@ -458,21 +533,16 @@ export function useMoveBuilder(files: Record<string, string>) {
       }
 
       const rootSourceFiles = Object.fromEntries(
-        Object.entries(files).filter(
+        Object.entries(preparedFiles).filter(
           ([p]) => p === 'Move.toml' || p.endsWith('.move'),
         ),
       );
       const rootModuleCount = Object.keys(rootSourceFiles).filter(
         path => path !== 'Move.toml' && path.endsWith('.move'),
       ).length;
-      const worldPackageReference =
-        WORLD_PACKAGE_REFERENCES_BY_NETWORK[
-          network as 'devnet' | 'testnet' | 'mainnet'
-        ];
-      const shouldUseLocalWorldBuild =
-        network === 'testnet' &&
-        worldPackageReference !== undefined &&
-        moveTomlDeclaresWorldDependency(files['Move.toml']);
+      const shouldUseLocalWorldBuild = moveTomlDeclaresWorldDependency(
+        preparedFiles['Move.toml'],
+      );
 
       let buildFiles = rootSourceFiles;
       let buildResolvedDependencies: ResolvedDependencies | undefined =
@@ -509,8 +579,8 @@ export function useMoveBuilder(files: Record<string, string>) {
         resolvedDependencies: buildResolvedDependencies,
         silenceWarnings: false,
         ansiColor: true,
-        network: network as 'devnet' | 'testnet' | 'mainnet',
-        onProgress: (ev: any) => {
+        network: compileNetwork,
+        onProgress: (ev: BuildLogProgressEvent) => {
           switch (ev.type) {
             case 'resolve_dep':
               addLog(
@@ -547,7 +617,7 @@ export function useMoveBuilder(files: Record<string, string>) {
               files: worldOnlyFiles,
               silenceWarnings: true,
               ansiColor: true,
-              network: network as 'devnet' | 'testnet' | 'mainnet',
+              network: compileNetwork,
             });
             if (!('error' in worldOnlyResult)) {
               worldModuleSet = new Set(worldOnlyResult.modules);
@@ -582,15 +652,12 @@ export function useMoveBuilder(files: Record<string, string>) {
           ...success,
           modules,
           dependencies,
-        } as BuildSuccess;
+        } as BuildSuccessWithWarnings;
+        const warnings = normalizedSuccess.warnings;
         addLog(`✅ Build succeeded in ${elapsed}s`);
         addLog(`Digest: ${normalizedSuccess.digest ?? '-'}`);
         addLog(`Modules: ${normalizedSuccess.modules?.length ?? 0}`);
-        if (
-          'warnings' in normalizedSuccess &&
-          (normalizedSuccess as any).warnings
-        )
-          addLog(`⚠️ ${(normalizedSuccess as any).warnings}`);
+        if (warnings) addLog(`⚠️ ${warnings}`);
         setBuildOk(true);
         setCompiled(normalizedSuccess);
       }
@@ -610,7 +677,7 @@ export function useMoveBuilder(files: Record<string, string>) {
     setPackageId('');
     setTxDigest('');
     setIsPublishing(true);
-    addLog('🚀 Publishing…');
+    addLog(`🚀 Publishing to ${environmentLabel} (${targetId})…`);
 
     const tx = new Transaction();
     const modules = comp.modules.map(
@@ -623,7 +690,10 @@ export function useMoveBuilder(files: Record<string, string>) {
     tx.transferObjects([upgradeCap], tx.pure.address(account.address));
 
     try {
-      const res = await signAndExecuteTransaction({ transaction: tx as any });
+      const res = await signAndExecuteTransaction({
+        transaction: tx,
+        chain: walletChain,
+      });
       const digest = res.digest;
       if (!digest) {
         addLog('❌ Transaction failed (no digest)');
@@ -638,13 +708,16 @@ export function useMoveBuilder(files: Record<string, string>) {
           options: { showEffects: true, showObjectChanges: true },
         });
 
-        const createdPkgInfo = (txb.objectChanges || []).find(
-          (o: any) => o.type === 'published',
+        const objectChanges = txb.objectChanges ?? [];
+        const createdPkgInfo = objectChanges.find(
+          (
+            change,
+          ): change is Extract<
+            (typeof objectChanges)[number],
+            { type: 'published' }
+          > => change.type === 'published',
         );
-        const createdPkg =
-          createdPkgInfo && 'packageId' in createdPkgInfo
-            ? (createdPkgInfo as any).packageId
-            : undefined;
+        const createdPkg = createdPkgInfo?.packageId;
         if (createdPkg) {
           addLog(`📦 Package ID: ${createdPkg}`);
           setPackageId(createdPkg);
@@ -658,7 +731,7 @@ export function useMoveBuilder(files: Record<string, string>) {
       const message = String(e);
       if (/PublishUpgradeMissingDependency/i.test(message)) {
         addLog(
-          '❌ Publish failed: world dependency linkage did not match the live testnet package',
+          `❌ Publish failed: world dependency linkage did not match the live ${environmentLabel} world package`,
         );
       } else {
         addLog(`❌ Publish failed: ${message}`);
