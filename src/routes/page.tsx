@@ -1,11 +1,12 @@
 import { useNavigate } from '@modern-js/runtime/router';
-import { GATE_TEMPLATES, SSU_TEMPLATES, TURRET_TEMPLATES } from '@/templates';
+import { GATE_TEMPLATES, SSU_TEMPLATES, TURRET_TEMPLATES, TEST_TEMPLATES } from '@/templates';
 import type { AssemblyTemplate } from '@/templates/types';
 
 const ASSEMBLY_GROUPS = [
   { icon: '🛡️', label: 'Smart Gate', templates: GATE_TEMPLATES },
   { icon: '📦', label: 'Storage Unit', templates: SSU_TEMPLATES },
   { icon: '🔫', label: 'Turret', templates: TURRET_TEMPLATES },
+  { icon: '🧪', label: 'Pipeline Test', templates: TEST_TEMPLATES },
 ];
 
 function TemplateCard({
