@@ -10,6 +10,10 @@ import { Transaction } from '@mysten/sui/transactions';
 import { fromBase64 } from '@mysten/sui/utils';
 
 import {
+  WORLD_PACKAGE_REFERENCES_BY_NETWORK,
+  type WorldPackageReference,
+} from '@/config/constants';
+import {
   buildMovePackage,
   getSuiMoveVersion,
   initMoveCompiler,
@@ -37,6 +41,250 @@ type ResolvedDependencySnapshot = {
   name?: string;
   files?: Record<string, string>;
 };
+
+function moveTomlDeclaresWorldDependency(
+  moveToml: string | undefined,
+): boolean {
+  return (
+    typeof moveToml === 'string' && /^\s*world\s*=\s*\{.*\}\s*$/m.test(moveToml)
+  );
+}
+
+function isSectionHeader(line: string): boolean {
+  return /^\[[^\]]+\]$/.test(line.trim());
+}
+
+function rewriteMoveTomlForLocalWorldDependency(
+  moveToml: string,
+  worldPackageId: string,
+): string {
+  const lines = moveToml.split('\n');
+  const result: string[] = [];
+  let inAddresses = false;
+  let inDependencies = false;
+  let sawAddresses = false;
+  let sawDependencies = false;
+  let worldAddressSet = false;
+  let worldDependencySet = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (isSectionHeader(trimmed)) {
+      if (inAddresses && !worldAddressSet) {
+        result.push(`world = "${worldPackageId}"`);
+        worldAddressSet = true;
+      }
+      if (inDependencies && !worldDependencySet) {
+        result.push('world = { local = "deps/world" }');
+        worldDependencySet = true;
+      }
+
+      inAddresses = /^\[addresses\]$/i.test(trimmed);
+      inDependencies = /^\[dependencies\]$/i.test(trimmed);
+      sawAddresses ||= inAddresses;
+      sawDependencies ||= inDependencies;
+      result.push(line);
+      continue;
+    }
+
+    if (inAddresses && /^\s*world\s*=\s*"[^"]*"\s*$/.test(line)) {
+      result.push(`world = "${worldPackageId}"`);
+      worldAddressSet = true;
+      continue;
+    }
+
+    if (inDependencies && /^\s*world\s*=\s*\{.*\}\s*$/.test(line)) {
+      result.push('world = { local = "deps/world" }');
+      worldDependencySet = true;
+      continue;
+    }
+
+    result.push(line);
+  }
+
+  if (inAddresses && !worldAddressSet) {
+    result.push(`world = "${worldPackageId}"`);
+    worldAddressSet = true;
+  }
+
+  if (inDependencies && !worldDependencySet) {
+    result.push('world = { local = "deps/world" }');
+    worldDependencySet = true;
+  }
+
+  if (!sawAddresses) {
+    if (result.length > 0 && result[result.length - 1] !== '') {
+      result.push('');
+    }
+    result.push('[addresses]');
+    result.push(`world = "${worldPackageId}"`);
+  }
+
+  if (!sawDependencies) {
+    if (result.length > 0 && result[result.length - 1] !== '') {
+      result.push('');
+    }
+    result.push('[dependencies]');
+    result.push('world = { local = "deps/world" }');
+  }
+
+  return result.join('\n');
+}
+
+function createWorldDepMoveToml(worldPackageId: string): string {
+  return [
+    '[package]',
+    'name = "world"',
+    'edition = "2024.beta"',
+    `published-at = "${worldPackageId}"`,
+    '',
+    '[addresses]',
+    `world = "${worldPackageId}"`,
+    '',
+  ].join('\n');
+}
+
+function extractWorldFilesFromResolvedDependencies(
+  resolved: ResolvedDependencies,
+  worldPackageId: string,
+): Record<string, string> {
+  try {
+    const dependencyPackages = JSON.parse(
+      resolved.dependencies,
+    ) as ResolvedDependencySnapshot[];
+    if (!Array.isArray(dependencyPackages)) {
+      return {};
+    }
+
+    for (const snapshot of dependencyPackages) {
+      if (
+        snapshot.name?.toLowerCase() !== 'world' ||
+        snapshot.files === undefined
+      ) {
+        continue;
+      }
+
+      const worldFiles: Record<string, string> = {};
+      const packagePrefix = `dependencies/${snapshot.name}/`;
+
+      for (const [filePath, content] of Object.entries(snapshot.files)) {
+        if (!filePath.startsWith(packagePrefix)) {
+          continue;
+        }
+
+        const relativePath = filePath.slice(packagePrefix.length);
+        if (/^tests\//i.test(relativePath)) {
+          continue;
+        }
+
+        if (relativePath === 'Move.toml') {
+          worldFiles['deps/world/Move.toml'] =
+            createWorldDepMoveToml(worldPackageId);
+          continue;
+        }
+
+        worldFiles[`deps/world/${relativePath}`] = content;
+      }
+
+      if (!('deps/world/Move.toml' in worldFiles)) {
+        worldFiles['deps/world/Move.toml'] =
+          createWorldDepMoveToml(worldPackageId);
+      }
+
+      return worldFiles;
+    }
+  } catch {
+    return {};
+  }
+
+  return {};
+}
+
+function createLocalWorldBuildFiles(
+  rootFiles: Record<string, string>,
+  worldFiles: Record<string, string>,
+  worldPackageId: string,
+): Record<string, string> {
+  const files: Record<string, string> = {
+    'Move.toml': rewriteMoveTomlForLocalWorldDependency(
+      rootFiles['Move.toml'] ?? '',
+      worldPackageId,
+    ),
+  };
+
+  for (const [filePath, content] of Object.entries(rootFiles)) {
+    if (filePath === 'Move.toml' || filePath.startsWith('deps/world/')) {
+      continue;
+    }
+    files[filePath] = content;
+  }
+
+  for (const [filePath, content] of Object.entries(worldFiles)) {
+    files[filePath] = content;
+  }
+
+  return files;
+}
+
+function createWorldOnlyFileMap(
+  localWorldFiles: Record<string, string>,
+): Record<string, string> {
+  const files: Record<string, string> = {};
+
+  for (const [filePath, content] of Object.entries(localWorldFiles)) {
+    if (!filePath.startsWith('deps/world/')) {
+      continue;
+    }
+    files[filePath.replace('deps/world/', '')] = content;
+  }
+
+  return files;
+}
+
+function selectExtensionModules(
+  modules: string[],
+  worldModuleSet: ReadonlySet<string> | null,
+  expectedRootModuleCount: number,
+): { modules: string[]; usedFallback: boolean } {
+  if (worldModuleSet !== null) {
+    const filtered = modules.filter(module => !worldModuleSet.has(module));
+    if (filtered.length > 0) {
+      return { modules: filtered, usedFallback: false };
+    }
+  }
+
+  if (expectedRootModuleCount > 0 && modules.length > expectedRootModuleCount) {
+    return {
+      modules: modules.slice(-expectedRootModuleCount),
+      usedFallback: true,
+    };
+  }
+
+  return { modules, usedFallback: false };
+}
+
+function normalizePublishedDependencies(
+  dependencies: string[] | undefined,
+  worldPackageReference: WorldPackageReference,
+): string[] {
+  const dependencyLinkPackageId = worldPackageReference.originalId;
+  const normalizedDependencies = (dependencies ?? []).map(dependency => {
+    if (
+      dependency === worldPackageReference.originalId ||
+      dependency === worldPackageReference.publishedAt
+    ) {
+      return dependencyLinkPackageId;
+    }
+    return dependency;
+  });
+
+  if (!normalizedDependencies.includes(dependencyLinkPackageId)) {
+    normalizedDependencies.push(dependencyLinkPackageId);
+  }
+
+  return Array.from(new Set(normalizedDependencies));
+}
 
 function sanitizeDependencySnapshot(
   snapshot: ResolvedDependencySnapshot,
@@ -209,17 +457,56 @@ export function useMoveBuilder(files: Record<string, string>) {
         );
       }
 
-      const sourceFiles = Object.fromEntries(
+      const rootSourceFiles = Object.fromEntries(
         Object.entries(files).filter(
           ([p]) => p === 'Move.toml' || p.endsWith('.move'),
         ),
       );
+      const rootModuleCount = Object.keys(rootSourceFiles).filter(
+        path => path !== 'Move.toml' && path.endsWith('.move'),
+      ).length;
+      const worldPackageReference =
+        WORLD_PACKAGE_REFERENCES_BY_NETWORK[
+          network as 'devnet' | 'testnet' | 'mainnet'
+        ];
+      const shouldUseLocalWorldBuild =
+        network === 'testnet' &&
+        worldPackageReference !== undefined &&
+        moveTomlDeclaresWorldDependency(files['Move.toml']);
+
+      let buildFiles = rootSourceFiles;
+      let buildResolvedDependencies: ResolvedDependencies | undefined =
+        sanitized.resolved;
+      let localWorldBuildApplied = false;
+
+      if (shouldUseLocalWorldBuild) {
+        const worldFiles = extractWorldFilesFromResolvedDependencies(
+          sanitized.resolved,
+          worldPackageReference.originalId,
+        );
+        if (Object.keys(worldFiles).length > 0) {
+          buildFiles = createLocalWorldBuildFiles(
+            rootSourceFiles,
+            worldFiles,
+            worldPackageReference.originalId,
+          );
+          buildResolvedDependencies = undefined;
+          localWorldBuildApplied = true;
+          addLog(
+            `📦 Re-linked world dependency through local deps/world -> ${worldPackageReference.originalId}`,
+          );
+        } else {
+          addLog(
+            '⚠️ Could not extract world source from resolved dependencies; falling back to direct dependency build',
+          );
+        }
+      }
 
       addLog('🔨 Compiling…');
 
       const result = await buildMovePackage({
-        files: sourceFiles,
-        resolvedDependencies: sanitized.resolved,
+        files: buildFiles,
+        resolvedDependencies: buildResolvedDependencies,
         silenceWarnings: false,
         ansiColor: true,
         network: network as 'devnet' | 'testnet' | 'mainnet',
@@ -248,13 +535,64 @@ export function useMoveBuilder(files: Record<string, string>) {
         setBuildOk(false);
       } else {
         const success = result as BuildSuccess;
+        let modules = success.modules ?? [];
+        let dependencies = success.dependencies ?? [];
+
+        if (localWorldBuildApplied && worldPackageReference !== undefined) {
+          const worldOnlyFiles = createWorldOnlyFileMap(buildFiles);
+          let worldModuleSet: ReadonlySet<string> | null = null;
+
+          try {
+            const worldOnlyResult = await buildMovePackage({
+              files: worldOnlyFiles,
+              silenceWarnings: true,
+              ansiColor: true,
+              network: network as 'devnet' | 'testnet' | 'mainnet',
+            });
+            if (!('error' in worldOnlyResult)) {
+              worldModuleSet = new Set(worldOnlyResult.modules);
+            }
+          } catch {
+            worldModuleSet = null;
+          }
+
+          const selectedModules = selectExtensionModules(
+            modules,
+            worldModuleSet,
+            rootModuleCount,
+          );
+          modules = selectedModules.modules;
+          dependencies = normalizePublishedDependencies(
+            dependencies,
+            worldPackageReference,
+          );
+
+          if (worldModuleSet !== null) {
+            addLog(
+              `📦 Filtered bundled world modules (${success.modules.length} -> ${modules.length})`,
+            );
+          } else if (selectedModules.usedFallback) {
+            addLog(
+              `⚠️ World-only module detection failed; keeping the last ${modules.length} root modules`,
+            );
+          }
+        }
+
+        const normalizedSuccess = {
+          ...success,
+          modules,
+          dependencies,
+        } as BuildSuccess;
         addLog(`✅ Build succeeded in ${elapsed}s`);
-        addLog(`Digest: ${success.digest ?? '-'}`);
-        addLog(`Modules: ${success.modules?.length ?? 0}`);
-        if ('warnings' in success && (success as any).warnings)
-          addLog(`⚠️ ${(success as any).warnings}`);
+        addLog(`Digest: ${normalizedSuccess.digest ?? '-'}`);
+        addLog(`Modules: ${normalizedSuccess.modules?.length ?? 0}`);
+        if (
+          'warnings' in normalizedSuccess &&
+          (normalizedSuccess as any).warnings
+        )
+          addLog(`⚠️ ${(normalizedSuccess as any).warnings}`);
         setBuildOk(true);
-        setCompiled(result);
+        setCompiled(normalizedSuccess);
       }
     } catch (e) {
       addLog(`❌ ${String(e)}`);
@@ -317,7 +655,14 @@ export function useMoveBuilder(files: Record<string, string>) {
         addLog(`⚠️ Lookup failed: ${String(e)}`);
       }
     } catch (e) {
-      addLog(`❌ Publish failed: ${String(e)}`);
+      const message = String(e);
+      if (/PublishUpgradeMissingDependency/i.test(message)) {
+        addLog(
+          '❌ Publish failed: world dependency linkage did not match the live testnet package',
+        );
+      } else {
+        addLog(`❌ Publish failed: ${message}`);
+      }
     } finally {
       setIsPublishing(false);
     }

@@ -12,9 +12,10 @@ name = "smart_gate_extension"
 edition = "2024"
 
 [dependencies]
-world = { git = "https://github.com/evefrontier/world-contracts.git", subdir = "contracts/world", rev = "v0.0.18" }
+world = { git = "https://github.com/evefrontier/world-contracts.git", subdir = "contracts/world", rev = "v0.0.21" }
 
 [environments]
+testnet = "4c78adac"
 testnet_internal = "4c78adac"
 testnet_utopia = "4c78adac"
 testnet_stillness = "4c78adac"
