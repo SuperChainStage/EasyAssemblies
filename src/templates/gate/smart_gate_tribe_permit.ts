@@ -1,4 +1,15 @@
-import { AssemblyTemplate } from '../types';
+import {
+  DEFAULT_GATE_CONFIG,
+  type GateExtensionConfig,
+} from '@/config/gate-config';
+import type { AssemblyTemplate } from '../types';
+
+const DEFAULT_MODULE_NAME = DEFAULT_GATE_CONFIG.moduleName;
+
+function replaceModuleName(source: string, moduleName: string): string {
+  if (moduleName === DEFAULT_MODULE_NAME) return source;
+  return source.replaceAll(DEFAULT_MODULE_NAME, moduleName);
+}
 
 export const smartGateTribePermit: AssemblyTemplate = {
   id: 'gate_tribe_permit',
@@ -6,8 +17,74 @@ export const smartGateTribePermit: AssemblyTemplate = {
   assemblyType: 'gate',
   description: 'Players can jump if they belong to a specific starter tribe',
   detail: 'This setup publishes a shared configuration object and a specialized permit issuer. The gate owner sets a target tribe ID, and any character matching that tribe ID can request a permit to jump through the gate.',
-  files: () => ({
-    'Move.toml': `[package]
+  configFields: [
+    {
+      key: 'moduleName',
+      label: 'Package Name',
+      type: 'string',
+      defaultValue: DEFAULT_GATE_CONFIG.moduleName,
+      placeholder: 'e.g. my_gate_extension',
+      validate: (v) => {
+        if (typeof v !== 'string' || !/^[a-z_][a-z0-9_]*$/.test(v))
+          return 'Only lowercase letters, digits, and underscores; must start with a letter or underscore.';
+        if (v.length > 64) return 'Max 64 characters.';
+        return null;
+      },
+    },
+    {
+      key: 'tribeId',
+      label: 'Tribe ID',
+      type: 'number',
+      defaultValue: DEFAULT_GATE_CONFIG.tribeId,
+      placeholder: 'e.g. 100',
+      validate: (v) =>
+        typeof v === 'number' && Number.isInteger(v) && v >= 0
+          ? null
+          : 'Must be a non-negative integer.',
+    },
+    {
+      key: 'expiryDurationMs',
+      label: 'Permit Expiry (ms)',
+      type: 'number',
+      defaultValue: DEFAULT_GATE_CONFIG.expiryDurationMs,
+      placeholder: 'e.g. 3600000',
+      validate: (v) =>
+        typeof v === 'number' && Number.isInteger(v) && v > 0
+          ? null
+          : 'Must be a positive integer.',
+    },
+    {
+      key: 'bountyTypeId',
+      label: 'Bounty Type ID',
+      type: 'number',
+      defaultValue: DEFAULT_GATE_CONFIG.bountyTypeId,
+      placeholder: '0 to disable',
+      validate: (v) =>
+        typeof v === 'number' && Number.isInteger(v) && v >= 0
+          ? null
+          : 'Must be a non-negative integer.',
+    },
+    {
+      key: 'bountyExpiryMs',
+      label: 'Bounty Expiry (ms)',
+      type: 'number',
+      defaultValue: DEFAULT_GATE_CONFIG.bountyExpiryMs,
+      placeholder: 'e.g. 3600000',
+      validate: (v) =>
+        typeof v === 'number' && Number.isInteger(v) && v > 0
+          ? null
+          : 'Must be a positive integer.',
+    },
+  ],
+  files: (rawConfig?: Record<string, unknown>) => {
+    const cfg: GateExtensionConfig = {
+      ...DEFAULT_GATE_CONFIG,
+      ...(rawConfig as Partial<GateExtensionConfig> | undefined),
+    };
+    const m = cfg.moduleName;
+
+    return {
+      'Move.toml': replaceModuleName(`[package]
 name = "smart_gate_extension"
 edition = "2024"
 
@@ -19,8 +96,9 @@ testnet = "4c78adac"
 testnet_internal = "4c78adac"
 testnet_utopia = "4c78adac"
 testnet_stillness = "4c78adac"
-`,
-    'sources/config.move': `/// Builder extensions shared configuration.
+`, m),
+
+      'sources/config.move': replaceModuleName(`/// Builder extensions shared configuration.
 ///
 /// This module publishes a single shared \`ExtensionConfig\` object at package publish time
 /// Other builder-extension modules can attach their own typed rule/config
@@ -109,8 +187,9 @@ public fun remove_rule<K: copy + drop + store, V: store>(
 public(package) fun x_auth(): XAuth {
     XAuth {}
 }
-`,
-    'sources/tribe_permit.move': `/// Example builder extension for \`world::gate\` using the typed-witness extension pattern.
+`, m),
+
+      'sources/tribe_permit.move': replaceModuleName(`/// Example builder extension for \`world::gate\` using the typed-witness extension pattern.
 ///
 /// This module demonstrates how builders/players can enforce custom jump rules by issuing a
 /// \`world::gate::JumpPermit\` from extension logic:
@@ -199,8 +278,9 @@ public fun set_tribe_config(
         TribeConfig { tribe, expiry_duration_ms },
     );
 }
-`,
-    'sources/corpse_gate_bounty.move': `/// Example builder extension for the \`world\` package.
+`, m),
+
+      'sources/corpse_gate_bounty.move': replaceModuleName(`/// Example builder extension for the \`world\` package.
 ///
 /// This module demonstrates how to extend \`world\`'s \`StorageUnit\` and \`Gate\` assemblies:
 /// - withdraw an item from a player's \`StorageUnit\` (with owner auth)
@@ -314,6 +394,7 @@ public fun set_bounty_config(
         BountyConfig { bounty_type_id, expiry_duration_ms },
     );
 }
-`,
-  }),
+`, m),
+    };
+  },
 };
