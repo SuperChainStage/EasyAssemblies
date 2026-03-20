@@ -31,7 +31,12 @@ export default function PlaygroundPage() {
     const fetchTemplate = async () => {
       const tpl = getTemplate(templateId);
       if (tpl) {
-        const fileMap = await tpl.files();
+        let config: Record<string, unknown> | undefined;
+        try {
+          const raw = searchParams.get('config');
+          if (raw) config = JSON.parse(raw) as Record<string, unknown>;
+        } catch { /* use defaults */ }
+        const fileMap = await tpl.files(config);
         if (didCancel) return;
         setFiles(fileMap);
         const firstMove = Object.keys(fileMap).find(f => f.endsWith('.move'));
@@ -42,7 +47,7 @@ export default function PlaygroundPage() {
     return () => {
       didCancel = true;
     };
-  }, [templateId]);
+  }, [templateId, searchParams]);
 
   // Compiler & Deployment Hook
   const {

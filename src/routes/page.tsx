@@ -1,6 +1,8 @@
 import { useNavigate } from '@modern-js/runtime/router';
+import { useState } from 'react';
 import { GATE_TEMPLATES, SSU_TEMPLATES, TURRET_TEMPLATES, TEST_TEMPLATES } from '@/templates';
 import type { AssemblyTemplate } from '@/templates/types';
+import { ConfigForm } from '@/components/ConfigForm';
 
 const ASSEMBLY_GROUPS = [
   { icon: '🛡️', label: 'Smart Gate', templates: GATE_TEMPLATES },
@@ -74,6 +76,24 @@ function TemplateCard({
 
 export default function IndexPage() {
   const navigate = useNavigate();
+  const [configTarget, setConfigTarget] = useState<AssemblyTemplate | null>(null);
+
+  const handleTemplateClick = (tpl: AssemblyTemplate) => {
+    if (tpl.configFields && tpl.configFields.length > 0) {
+      setConfigTarget(tpl);
+    } else {
+      navigate(`/playground?template=${tpl.id}`);
+    }
+  };
+
+  const handleConfigSubmit = (values: Record<string, unknown>) => {
+    if (!configTarget) return;
+    const params = new URLSearchParams();
+    params.set('template', configTarget.id);
+    params.set('config', JSON.stringify(values));
+    navigate(`/playground?${params.toString()}`);
+    setConfigTarget(null);
+  };
 
   return (
     <div
@@ -88,6 +108,14 @@ export default function IndexPage() {
         padding: '60px 24px 80px',
       }}
     >
+      {configTarget && configTarget.configFields && (
+        <ConfigForm
+          fields={configTarget.configFields}
+          templateLabel={configTarget.label}
+          onSubmit={handleConfigSubmit}
+          onCancel={() => setConfigTarget(null)}
+        />
+      )}
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: '56px', maxWidth: '600px' }}>
         <div
@@ -170,7 +198,7 @@ export default function IndexPage() {
                   <TemplateCard
                     key={tpl.id}
                     template={tpl}
-                    onClick={() => navigate(`/playground?template=${tpl.id}`)}
+                    onClick={() => handleTemplateClick(tpl)}
                   />
                 ))}
               </div>
