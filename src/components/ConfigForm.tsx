@@ -46,6 +46,29 @@ export function ConfigForm({
     onSubmit(values as Record<string, unknown>);
   };
 
+  const compileFields = fields.filter(f => f.phase === 'compile');
+  const postDeployFields = fields.filter(f => f.phase === 'post-deploy');
+  const ungroupedFields = fields.filter(f => !f.phase);
+
+  const renderField = (field: ConfigField) => (
+    <label key={field.key} style={fieldWrapStyle}>
+      <span style={labelStyle}>{field.label}</span>
+      <input
+        type={field.type === 'number' ? 'number' : 'text'}
+        value={values[field.key] ?? ''}
+        placeholder={field.placeholder}
+        onChange={e => handleChange(field.key, e.target.value, field)}
+        style={{
+          ...inputStyle,
+          borderColor: errors[field.key] ? '#f87171' : '#444',
+        }}
+      />
+      {errors[field.key] && (
+        <span style={errorStyle}>{errors[field.key]}</span>
+      )}
+    </label>
+  );
+
   return (
     <div style={overlayStyle} onClick={onCancel}>
       <div style={modalStyle} onClick={e => e.stopPropagation()}>
@@ -57,24 +80,29 @@ export function ConfigForm({
         </div>
 
         <div style={bodyStyle}>
-          {fields.map(field => (
-            <label key={field.key} style={fieldWrapStyle}>
-              <span style={labelStyle}>{field.label}</span>
-              <input
-                type={field.type === 'number' ? 'number' : 'text'}
-                value={values[field.key] ?? ''}
-                placeholder={field.placeholder}
-                onChange={e => handleChange(field.key, e.target.value, field)}
-                style={{
-                  ...inputStyle,
-                  borderColor: errors[field.key] ? '#f87171' : '#444',
-                }}
-              />
-              {errors[field.key] && (
-                <span style={errorStyle}>{errors[field.key]}</span>
-              )}
-            </label>
-          ))}
+          {compileFields.length > 0 && (
+            <div style={sectionStyle}>
+              <div style={sectionHeaderStyle}>
+                <span style={sectionTitleStyle}>Compile-time</span>
+                <span style={sectionHintStyle}>Changes the generated Move source code</span>
+              </div>
+              {compileFields.map(renderField)}
+            </div>
+          )}
+
+          {postDeployFields.length > 0 && (
+            <div style={sectionStyle}>
+              <div style={sectionHeaderStyle}>
+                <span style={sectionTitleStyle}>Post-deploy</span>
+                <span style={sectionHintStyle}>
+                  Configured on-chain after deployment via admin transactions
+                </span>
+              </div>
+              {postDeployFields.map(renderField)}
+            </div>
+          )}
+
+          {ungroupedFields.length > 0 && ungroupedFields.map(renderField)}
         </div>
 
         <div style={footerStyle}>
@@ -121,10 +149,36 @@ const headerStyle: React.CSSProperties = {
 const bodyStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '16px',
+  gap: '20px',
   padding: '20px 24px',
   maxHeight: '60vh',
   overflowY: 'auto',
+};
+
+const sectionStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '12px',
+};
+
+const sectionHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2px',
+};
+
+const sectionTitleStyle: React.CSSProperties = {
+  fontSize: '11px',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '1px',
+  color: '#6366f1',
+};
+
+const sectionHintStyle: React.CSSProperties = {
+  fontSize: '11px',
+  color: '#6b7280',
+  lineHeight: '1.4',
 };
 
 const fieldWrapStyle: React.CSSProperties = {

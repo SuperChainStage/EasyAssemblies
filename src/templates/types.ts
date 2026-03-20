@@ -19,4 +19,6 @@ export interface ConfigField {
   defaultValue: string | number;
   placeholder?: string;
   validate?: (value: unknown) => string | null;
+  /** 'compile' = baked into generated Move code; 'post-deploy' = set on-chain after deployment */
+  phase?: 'compile' | 'post-deploy';
 }

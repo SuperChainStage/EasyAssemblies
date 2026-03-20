@@ -7,6 +7,7 @@ import { useMoveBuilder } from '@/hooks/useMoveBuilder';
 import { getTemplate } from '@/templates';
 import { useNavigate, useSearchParams } from '@modern-js/runtime/router';
 import { useEffect, useMemo, useState } from 'react';
+import type { ConfigField } from '@/templates/types';
 
 export default function PlaygroundPage() {
   // Core state management
@@ -17,6 +18,16 @@ export default function PlaygroundPage() {
   const navigate = useNavigate();
   const templateId = searchParams.get('template');
   const explorerBaseUrl = useNetworkVariable('explorerBaseUrl');
+
+  const template = templateId ? getTemplate(templateId) : undefined;
+
+  const activeConfig = useMemo<Record<string, unknown> | undefined>(() => {
+    try {
+      const raw = searchParams.get('config');
+      if (raw) return JSON.parse(raw) as Record<string, unknown>;
+    } catch { /* use defaults */ }
+    return undefined;
+  }, [searchParams]);
 
   // Redirect to home if no template or template not found
   useEffect(() => {
@@ -181,6 +192,13 @@ export default function PlaygroundPage() {
               onSelect={setSelectedPath}
             />
           </div>
+
+          {template?.configFields && activeConfig && (
+            <ConfigSummary
+              fields={template.configFields}
+              values={activeConfig}
+            />
+          )}
         </div>
 
         {/* Main Column: Editor (Task 1.5) + Console (Task 1.6) */}
@@ -232,6 +250,100 @@ export default function PlaygroundPage() {
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+function ConfigSummary({
+  fields,
+  values,
+}: {
+  fields: ConfigField[];
+  values: Record<string, unknown>;
+}) {
+  const compileFields = fields.filter(f => f.phase === 'compile');
+  const postDeployFields = fields.filter(f => f.phase === 'post-deploy');
+  const ungroupedFields = fields.filter(f => !f.phase);
+
+  const renderRow = (f: ConfigField) => {
+    const val = values[f.key] ?? f.defaultValue;
+    const isDefault = val === f.defaultValue || String(val) === String(f.defaultValue);
+    return (
+      <div
+        key={f.key}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '3px 0',
+        }}
+      >
+        <span style={{ fontSize: '11px', color: '#8b949e', flexShrink: 0 }}>
+          {f.label}
+        </span>
+        <span
+          style={{
+            fontSize: '11px',
+            fontFamily: "'JetBrains Mono', monospace",
+            color: isDefault ? '#6b7280' : '#e6edf3',
+            textAlign: 'right',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+          title={String(val)}
+        >
+          {String(val)}
+        </span>
+      </div>
+    );
+  };
+
+  const renderSection = (label: string, color: string, items: ConfigField[]) => {
+    if (items.length === 0) return null;
+    return (
+      <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <span
+          style={{
+            fontSize: '9px',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.8px',
+            color,
+          }}
+        >
+          {label}
+        </span>
+        {items.map(renderRow)}
+      </div>
+    );
+  };
+
+  return (
+    <div
+      style={{
+        borderTop: '1px solid #333',
+        padding: '12px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px',
+        flexShrink: 0,
+      }}
+    >
+      <span
+        style={{
+          fontSize: '12px',
+          color: '#888',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+        }}
+      >
+        Config
+      </span>
+      {renderSection('Compile-time', '#6366f1', compileFields)}
+      {renderSection('Post-deploy', '#8b949e', postDeployFields)}
+      {ungroupedFields.length > 0 && ungroupedFields.map(renderRow)}
     </div>
   );
 }

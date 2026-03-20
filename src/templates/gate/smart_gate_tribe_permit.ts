@@ -24,6 +24,7 @@ export const smartGateTribePermit: AssemblyTemplate = {
       type: 'string',
       defaultValue: DEFAULT_GATE_CONFIG.moduleName,
       placeholder: 'e.g. my_gate_extension',
+      phase: 'compile',
       validate: (v) => {
         if (typeof v !== 'string' || !/^[a-z_][a-z0-9_]*$/.test(v))
           return 'Only lowercase letters, digits, and underscores; must start with a letter or underscore.';
@@ -37,6 +38,7 @@ export const smartGateTribePermit: AssemblyTemplate = {
       type: 'number',
       defaultValue: DEFAULT_GATE_CONFIG.tribeId,
       placeholder: 'e.g. 100',
+      phase: 'post-deploy',
       validate: (v) =>
         typeof v === 'number' && Number.isInteger(v) && v >= 0
           ? null
@@ -48,6 +50,7 @@ export const smartGateTribePermit: AssemblyTemplate = {
       type: 'number',
       defaultValue: DEFAULT_GATE_CONFIG.expiryDurationMs,
       placeholder: 'e.g. 3600000',
+      phase: 'post-deploy',
       validate: (v) =>
         typeof v === 'number' && Number.isInteger(v) && v > 0
           ? null
@@ -59,6 +62,7 @@ export const smartGateTribePermit: AssemblyTemplate = {
       type: 'number',
       defaultValue: DEFAULT_GATE_CONFIG.bountyTypeId,
       placeholder: '0 to disable',
+      phase: 'post-deploy',
       validate: (v) =>
         typeof v === 'number' && Number.isInteger(v) && v >= 0
           ? null
@@ -70,6 +74,7 @@ export const smartGateTribePermit: AssemblyTemplate = {
       type: 'number',
       defaultValue: DEFAULT_GATE_CONFIG.bountyExpiryMs,
       placeholder: 'e.g. 3600000',
+      phase: 'post-deploy',
       validate: (v) =>
         typeof v === 'number' && Number.isInteger(v) && v > 0
           ? null
