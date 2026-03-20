@@ -56,6 +56,12 @@ type BuildSuccessWithWarnings = BuildSuccess & {
   warnings?: string;
 };
 
+type DependencyResolutionCacheEntry = {
+  resolved: ResolvedDependencies;
+  worldFiles: Record<string, string>;
+  sanitizedChanged: boolean;
+};
+
 const WORLD_DEPENDENCY_LINE_PATTERN =
   /^\s*world\s*=\s*\{(?=.*git\s*=\s*"https:\/\/github\.com\/evefrontier\/world-contracts\.git")(?=.*subdir\s*=\s*"contracts\/world")(?=.*rev\s*=\s*"[^"]+").*\}\s*$/m;
 
@@ -258,6 +264,38 @@ function createLocalWorldBuildFiles(
   return files;
 }
 
+function hasCompilableRootFiles(files: Record<string, string>): boolean {
+  return (
+    typeof files['Move.toml'] === 'string' &&
+    Object.keys(files).some(
+      path => path !== 'Move.toml' && path.endsWith('.move'),
+    )
+  );
+}
+
+function createDependencyResolutionCacheKey(
+  targetId: string,
+  files: Record<string, string>,
+): string {
+  const manifestFiles = Object.fromEntries(
+    Object.entries(files)
+      .filter(([path]) => {
+        return (
+          path === 'Move.toml' ||
+          path === 'Move.lock' ||
+          path === 'Published.toml' ||
+          /^Move\.[^.]+\.toml$/i.test(path)
+        );
+      })
+      .sort(([a], [b]) => a.localeCompare(b)),
+  );
+
+  return JSON.stringify({
+    targetId,
+    manifestFiles,
+  });
+}
+
 function createWorldOnlyFileMap(
   localWorldFiles: Record<string, string>,
 ): Record<string, string> {
@@ -414,6 +452,12 @@ export function useMoveBuilder(files: Record<string, string>) {
   const compilerRef = useRef<Promise<void> | null>(null);
   const versionRef = useRef<string | null>(null);
   const previousTargetRef = useRef<string | null>(null);
+  const dependencyCacheRef = useRef<
+    Map<string, DependencyResolutionCacheEntry>
+  >(new Map());
+  const dependencyResolvePromiseRef = useRef<
+    Map<string, Promise<DependencyResolutionCacheEntry>>
+  >(new Map());
 
   const account = useCurrentAccount();
   const suiClient = useSuiClient();
@@ -438,31 +482,155 @@ export function useMoveBuilder(files: Record<string, string>) {
     });
   }, []);
 
-  useEffect(() => {
-    let canceled = false;
-    (async () => {
+  const ensureCompilerVersion = useCallback(async (): Promise<string> => {
+    try {
       if (!compilerRef.current) {
         compilerRef.current = initMoveCompiler();
       }
-      try {
-        await compilerRef.current;
-      } catch {
-        return;
+      await compilerRef.current;
+    } catch (error) {
+      compilerRef.current = null;
+      throw error;
+    }
+
+    const compilerVersion = versionRef.current ?? (await getSuiMoveVersion());
+    versionRef.current = compilerVersion;
+    return compilerVersion;
+  }, []);
+
+  const prepareFilesForTarget = useCallback(
+    (inputFiles: Record<string, string>): Record<string, string> => {
+      const moveToml = inputFiles['Move.toml'] ?? '';
+      const targetMoveToml = rewriteMoveTomlForTargetWorldDependency(
+        moveToml,
+        worldPackageReference.sourceVersionTag,
+      );
+
+      return targetMoveToml === moveToml
+        ? inputFiles
+        : {
+            ...inputFiles,
+            'Move.toml': targetMoveToml,
+          };
+    },
+    [worldPackageReference.sourceVersionTag],
+  );
+
+  const resolveBuildDependencies = useCallback(
+    async (
+      preparedFiles: Record<string, string>,
+      compilerVersion: string,
+    ): Promise<{
+      entry: DependencyResolutionCacheEntry;
+      fromCache: boolean;
+    }> => {
+      const cacheKey = createDependencyResolutionCacheKey(
+        targetId,
+        preparedFiles,
+      );
+      const cached = dependencyCacheRef.current.get(cacheKey);
+      if (cached) {
+        return { entry: cached, fromCache: true };
       }
-      if (canceled) return;
+
+      let pending = dependencyResolvePromiseRef.current.get(cacheKey);
+      if (!pending) {
+        pending = (async () => {
+          const resolved = await resolveDependencies({
+            files: preparedFiles,
+            ansiColor: true,
+            network: compileNetwork,
+          });
+          const sanitized = sanitizeResolvedDependencies(
+            resolved,
+            compilerVersion,
+          );
+
+          const entry: DependencyResolutionCacheEntry = {
+            resolved: sanitized.resolved,
+            worldFiles: moveTomlDeclaresWorldDependency(
+              preparedFiles['Move.toml'],
+            )
+              ? extractWorldFilesFromResolvedDependencies(
+                  sanitized.resolved,
+                  worldPackageReference.originalId,
+                )
+              : {},
+            sanitizedChanged: sanitized.changed,
+          };
+
+          dependencyCacheRef.current.set(cacheKey, entry);
+          return entry;
+        })().finally(() => {
+          dependencyResolvePromiseRef.current.delete(cacheKey);
+        });
+
+        dependencyResolvePromiseRef.current.set(cacheKey, pending);
+      }
+
+      return {
+        entry: await pending,
+        fromCache: false,
+      };
+    },
+    [compileNetwork, targetId, worldPackageReference.originalId],
+  );
+
+  useEffect(() => {
+    let canceled = false;
+    (async () => {
       try {
-        const v = versionRef.current ?? (await getSuiMoveVersion());
-        versionRef.current = v;
+        const v = await ensureCompilerVersion();
+        if (canceled) return;
         const ts = new Date().toLocaleTimeString();
         setLogs(prev => [...prev, `[${ts}] 📌 Compiler ready — ${v}`]);
       } catch {
-        /* silent */
+        return;
       }
     })();
     return () => {
       canceled = true;
     };
-  }, []);
+  }, [ensureCompilerVersion]);
+
+  useEffect(() => {
+    if (!hasCompilableRootFiles(files)) {
+      return;
+    }
+
+    const preparedFiles = prepareFilesForTarget(files);
+    const cacheKey = createDependencyResolutionCacheKey(
+      targetId,
+      preparedFiles,
+    );
+    if (
+      dependencyCacheRef.current.has(cacheKey) ||
+      dependencyResolvePromiseRef.current.has(cacheKey)
+    ) {
+      return;
+    }
+
+    let canceled = false;
+    void (async () => {
+      try {
+        const compilerVersion = await ensureCompilerVersion();
+        await resolveBuildDependencies(preparedFiles, compilerVersion);
+      } catch {
+        if (canceled) return;
+        // Ignore warm-up failures; build will surface the actionable error.
+      }
+    })();
+
+    return () => {
+      canceled = true;
+    };
+  }, [
+    files,
+    targetId,
+    ensureCompilerVersion,
+    prepareFilesForTarget,
+    resolveBuildDependencies,
+  ]);
 
   useEffect(() => {
     if (
@@ -495,24 +663,14 @@ export function useMoveBuilder(files: Record<string, string>) {
 
     const start = performance.now();
     try {
-      if (!compilerRef.current) {
-        compilerRef.current = initMoveCompiler();
+      if (!hasCompilableRootFiles(files)) {
+        addLog('⏳ Template files are still loading; retry in a moment');
+        setBuildOk(false);
+        return;
       }
-      await compilerRef.current;
-      const compilerVersion = versionRef.current ?? (await getSuiMoveVersion());
-      versionRef.current = compilerVersion;
 
-      const targetMoveToml = rewriteMoveTomlForTargetWorldDependency(
-        files['Move.toml'] ?? '',
-        worldPackageReference.sourceVersionTag,
-      );
-      const preparedFiles =
-        targetMoveToml === (files['Move.toml'] ?? '')
-          ? files
-          : {
-              ...files,
-              'Move.toml': targetMoveToml,
-            };
+      const compilerVersion = await ensureCompilerVersion();
+      const preparedFiles = prepareFilesForTarget(files);
       if (preparedFiles !== files) {
         addLog(
           `📦 Target ${environmentLabel} uses world source ${worldPackageReference.sourceVersionTag}`,
@@ -520,13 +678,14 @@ export function useMoveBuilder(files: Record<string, string>) {
       }
 
       addLog('📦 Resolving dependencies…');
-      const resolved = await resolveDependencies({
-        files: preparedFiles,
-        ansiColor: true,
-        network: compileNetwork,
-      });
-      const sanitized = sanitizeResolvedDependencies(resolved, compilerVersion);
-      if (sanitized.changed) {
+      const dependencyResolution = await resolveBuildDependencies(
+        preparedFiles,
+        compilerVersion,
+      );
+      if (dependencyResolution.fromCache) {
+        addLog('♻️ Reused warmed dependency resolution');
+      }
+      if (dependencyResolution.entry.sanitizedChanged) {
         addLog(
           `⚠️ Applied world v0.0.18 compatibility patch for browser compiler ${compilerVersion}`,
         );
@@ -546,14 +705,11 @@ export function useMoveBuilder(files: Record<string, string>) {
 
       let buildFiles = rootSourceFiles;
       let buildResolvedDependencies: ResolvedDependencies | undefined =
-        sanitized.resolved;
+        dependencyResolution.entry.resolved;
       let localWorldBuildApplied = false;
 
       if (shouldUseLocalWorldBuild) {
-        const worldFiles = extractWorldFilesFromResolvedDependencies(
-          sanitized.resolved,
-          worldPackageReference.originalId,
-        );
+        const worldFiles = dependencyResolution.entry.worldFiles;
         if (Object.keys(worldFiles).length > 0) {
           buildFiles = createLocalWorldBuildFiles(
             rootSourceFiles,

@@ -16,6 +16,7 @@ export interface ActionBarProps {
   onBuild: () => Promise<void>;
   onDeploy: () => Promise<void>;
   busy: boolean;
+  buildReady: boolean;
   isPublishing: boolean;
   buildOk: boolean | null;
 }
@@ -26,6 +27,7 @@ export function ActionBar({
   onBuild,
   onDeploy,
   busy,
+  buildReady,
   isPublishing,
   buildOk,
 }: ActionBarProps) {
@@ -68,9 +70,9 @@ export function ActionBar({
         type="button"
         className="playground-btn playground-btn--build"
         onClick={onBuild}
-        disabled={busy}
+        disabled={busy || !buildReady}
       >
-        {busy ? '⏳ Building…' : '▶ Build'}
+        {busy ? '⏳ Building…' : buildReady ? '▶ Build' : '⏳ Loading…'}
       </button>
 
       {account ? (

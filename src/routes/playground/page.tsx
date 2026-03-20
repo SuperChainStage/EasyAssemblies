@@ -5,9 +5,9 @@ import { FileTree, buildFileTree } from '@/components/FileTree';
 import { useNetworkVariable } from '@/config/dapp-kit';
 import { useMoveBuilder } from '@/hooks/useMoveBuilder';
 import { getTemplate } from '@/templates';
+import type { ConfigField } from '@/templates/types';
 import { useNavigate, useSearchParams } from '@modern-js/runtime/router';
 import { useEffect, useMemo, useState } from 'react';
-import type { ConfigField } from '@/templates/types';
 
 export default function PlaygroundPage() {
   // Core state management
@@ -25,7 +25,9 @@ export default function PlaygroundPage() {
     try {
       const raw = searchParams.get('config');
       if (raw) return JSON.parse(raw) as Record<string, unknown>;
-    } catch { /* use defaults */ }
+    } catch {
+      /* use defaults */
+    }
     return undefined;
   }, [searchParams]);
 
@@ -46,7 +48,9 @@ export default function PlaygroundPage() {
         try {
           const raw = searchParams.get('config');
           if (raw) config = JSON.parse(raw) as Record<string, unknown>;
-        } catch { /* use defaults */ }
+        } catch {
+          /* use defaults */
+        }
         const fileMap = await tpl.files(config);
         if (didCancel) return;
         setFiles(fileMap);
@@ -72,6 +76,15 @@ export default function PlaygroundPage() {
     onBuild,
     onDeploy,
   } = useMoveBuilder(files);
+
+  const buildReady = useMemo(() => {
+    return (
+      typeof files['Move.toml'] === 'string' &&
+      Object.keys(files).some(
+        path => path !== 'Move.toml' && path.endsWith('.move'),
+      )
+    );
+  }, [files]);
 
   // Build file tree from flat paths
   const fileTree = useMemo(() => buildFileTree(Object.keys(files)), [files]);
@@ -225,7 +238,7 @@ export default function PlaygroundPage() {
                   fontSize: '14px',
                 }}
               >
-                Select a file to edit
+                {buildReady ? 'Select a file to edit' : 'Loading template…'}
               </div>
             )}
           </div>
@@ -245,6 +258,7 @@ export default function PlaygroundPage() {
             onBuild={onBuild}
             onDeploy={onDeploy}
             busy={busy}
+            buildReady={buildReady}
             isPublishing={isPublishing}
             buildOk={buildOk}
           />
@@ -267,7 +281,8 @@ function ConfigSummary({
 
   const renderRow = (f: ConfigField) => {
     const val = values[f.key] ?? f.defaultValue;
-    const isDefault = val === f.defaultValue || String(val) === String(f.defaultValue);
+    const isDefault =
+      val === f.defaultValue || String(val) === String(f.defaultValue);
     return (
       <div
         key={f.key}
@@ -300,10 +315,17 @@ function ConfigSummary({
     );
   };
 
-  const renderSection = (label: string, color: string, items: ConfigField[]) => {
+  const renderSection = (
+    label: string,
+    color: string,
+    items: ConfigField[],
+  ) => {
     if (items.length === 0) return null;
     return (
-      <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div
+        key={label}
+        style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
+      >
         <span
           style={{
             fontSize: '9px',
