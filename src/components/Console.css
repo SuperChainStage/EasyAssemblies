@@ -46,7 +46,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 12px;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Menlo', 'Monaco', monospace;
+  font-family: "JetBrains Mono", "Fira Code", "Menlo", "Monaco", monospace;
   font-size: 12px;
   line-height: 1.5;
   color: #e2e8f0;
@@ -92,4 +92,35 @@
 }
 .playground-deploy-link:hover {
   text-decoration: underline;
+}
+
+.playground-deploy-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.playground-console-action {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #4f46e5;
+  border-radius: 4px;
+  background: #6366f1;
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.playground-console-action:hover {
+  background: #4f46e5;
+}
+
+.playground-console-action--secondary {
+  border-color: #3b82f6;
+  background: transparent;
+  color: #93c5fd;
+}
+
+.playground-console-action--secondary:hover {
+  background: rgba(59, 130, 246, 0.12);
 }

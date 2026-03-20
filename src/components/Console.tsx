@@ -1,9 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import type { PostDeployConfigState } from '@/hooks/useMoveBuilder';
+import type React from 'react';
+import { useEffect, useRef } from 'react';
 import './Console.css';
 
 // ANSI sequence mapped to CSS colors
 type AnsiColorMap = Record<number, string>;
-const ANSI_REGEX = /\x1b\[[0-9;]*m/g;
+// biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape parsing needs to match ESC-prefixed color codes.
+const ANSI_REGEX = /\u001b\[[0-9;]*m/g;
 const ANSI_COLORS: AnsiColorMap = {
   30: '#e2e8f0',
   31: '#f87171',
@@ -36,13 +39,13 @@ function renderAnsi(text: string, colorMap: AnsiColorMap): React.ReactNode[] {
     const style: React.CSSProperties = {};
     if (currentColor) style.color = currentColor;
     if (isBold) style.fontWeight = 600;
-    
+
     chunk.split('\n').forEach((part, i, arr) => {
       if (part) {
         nodes.push(
           <span key={`a-${key++}`} style={style}>
             {part}
-          </span>
+          </span>,
         );
       }
       if (i < arr.length - 1) nodes.push(<br key={`b-${key++}`} />);
@@ -74,45 +77,90 @@ export interface ConsoleProps {
   onToggle: () => void;
   packageId?: string;
   txDigest?: string;
+  postDeployConfig?: PostDeployConfigState;
+  onRetryPostDeployConfig?: () => Promise<void>;
+  onRefreshPostDeployConfig?: () => Promise<void>;
   explorerBaseUrl?: string; // Optional URL config for looking up entities on Sui Explorer
 }
 
-export function Console({ 
-  logs, 
-  isOpen, 
-  onToggle, 
-  packageId, 
-  txDigest, 
-  explorerBaseUrl = 'https://suiscan.xyz/testnet' 
+function formatConfigStatus(status: PostDeployConfigState['status']): string {
+  switch (status) {
+    case 'ready':
+      return 'Pending';
+    case 'applying':
+      return 'Applying';
+    case 'failed':
+      return 'Needs Retry';
+    case 'applied':
+      return 'Applied';
+    case 'verifying':
+      return 'Verifying';
+    case 'verified':
+      return 'Verified';
+    default:
+      return 'Idle';
+  }
+}
+
+export function Console({
+  logs,
+  isOpen,
+  onToggle,
+  packageId,
+  txDigest,
+  postDeployConfig,
+  onRetryPostDeployConfig,
+  onRefreshPostDeployConfig,
+  explorerBaseUrl = 'https://suiscan.xyz/testnet',
 }: ConsoleProps) {
   const logEndRef = useRef<HTMLDivElement>(null);
+  const lastLog = logs[logs.length - 1];
+  const canRetryConfig =
+    postDeployConfig !== undefined &&
+    (postDeployConfig.status === 'failed' ||
+      postDeployConfig.status === 'ready');
+  const canRefreshConfig =
+    postDeployConfig?.packageId !== undefined &&
+    postDeployConfig.extensionConfigId !== undefined &&
+    postDeployConfig.requestedConfig !== undefined &&
+    postDeployConfig.status !== 'applying' &&
+    postDeployConfig.status !== 'verifying';
 
   // Auto-scroll logic
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && lastLog !== undefined) {
       logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [logs, isOpen]);
+  }, [isOpen, lastLog]);
 
   return (
-    <div className={`playground-console ${isOpen ? 'playground-console--open' : ''}`}>
+    <div
+      className={`playground-console ${isOpen ? 'playground-console--open' : ''}`}
+    >
       <div className="playground-console-header">
         <span>Terminal Console</span>
-        <button className="playground-console-header-btn" onClick={onToggle}>
+        <button
+          type="button"
+          className="playground-console-header-btn"
+          onClick={onToggle}
+        >
           &times;
         </button>
       </div>
 
       <div className="playground-console-body">
-        {logs.map((line, i) => (
-          <div key={i} className="playground-console-line">
+        {logs.map(line => (
+          <div key={line} className="playground-console-line">
             {renderAnsi(line, ANSI_COLORS)}
           </div>
         ))}
         <div ref={logEndRef} />
       </div>
 
-      {(packageId || txDigest) && (
+      {(packageId ||
+        txDigest ||
+        (postDeployConfig !== undefined &&
+          postDeployConfig.status !== 'idle')) && (
         <div className="playground-deploy-info">
           {packageId && (
             <div className="playground-deploy-row">
@@ -141,6 +189,132 @@ export function Console({
                 View ↗
               </a>
             </div>
+          )}
+          {postDeployConfig && postDeployConfig.status !== 'idle' && (
+            <>
+              <div className="playground-deploy-row">
+                <span className="playground-deploy-label">Config</span>
+                <code className="playground-deploy-value">
+                  {formatConfigStatus(postDeployConfig.status)}
+                </code>
+              </div>
+              {postDeployConfig.extensionConfigId && (
+                <div className="playground-deploy-row">
+                  <span className="playground-deploy-label">ExtConfig</span>
+                  <code className="playground-deploy-value">
+                    {postDeployConfig.extensionConfigId}
+                  </code>
+                  <a
+                    href={`${explorerBaseUrl}/object/${postDeployConfig.extensionConfigId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="playground-deploy-link"
+                  >
+                    View ↗
+                  </a>
+                </div>
+              )}
+              {postDeployConfig.adminCapId && (
+                <div className="playground-deploy-row">
+                  <span className="playground-deploy-label">AdminCap</span>
+                  <code className="playground-deploy-value">
+                    {postDeployConfig.adminCapId}
+                  </code>
+                  <a
+                    href={`${explorerBaseUrl}/object/${postDeployConfig.adminCapId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="playground-deploy-link"
+                  >
+                    View ↗
+                  </a>
+                </div>
+              )}
+              {postDeployConfig.configTxDigest && (
+                <div className="playground-deploy-row">
+                  <span className="playground-deploy-label">Config Tx</span>
+                  <code className="playground-deploy-value">
+                    {postDeployConfig.configTxDigest}
+                  </code>
+                  <a
+                    href={`${explorerBaseUrl}/tx/${postDeployConfig.configTxDigest}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="playground-deploy-link"
+                  >
+                    View ↗
+                  </a>
+                </div>
+              )}
+              {postDeployConfig.verification && (
+                <>
+                  <div className="playground-deploy-row">
+                    <span className="playground-deploy-label">Tribe</span>
+                    <code className="playground-deploy-value">
+                      {postDeployConfig.verification.tribeId ?? '-'}
+                    </code>
+                  </div>
+                  <div className="playground-deploy-row">
+                    <span className="playground-deploy-label">Permit Ms</span>
+                    <code className="playground-deploy-value">
+                      {postDeployConfig.verification.expiryDurationMs ?? '-'}
+                    </code>
+                  </div>
+                  <div className="playground-deploy-row">
+                    <span className="playground-deploy-label">Bounty</span>
+                    <code className="playground-deploy-value">
+                      {postDeployConfig.verification.hasBountyConfig
+                        ? (postDeployConfig.verification.bountyTypeId ?? '-')
+                        : 'disabled'}
+                    </code>
+                  </div>
+                  <div className="playground-deploy-row">
+                    <span className="playground-deploy-label">Bounty Ms</span>
+                    <code className="playground-deploy-value">
+                      {postDeployConfig.verification.hasBountyConfig
+                        ? (postDeployConfig.verification.bountyExpiryMs ?? '-')
+                        : 'disabled'}
+                    </code>
+                  </div>
+                </>
+              )}
+              {postDeployConfig.error && (
+                <div className="playground-deploy-row">
+                  <span className="playground-deploy-label">Config Err</span>
+                  <code className="playground-deploy-value">
+                    {postDeployConfig.error}
+                  </code>
+                </div>
+              )}
+              {(canRetryConfig || canRefreshConfig) && (
+                <div className="playground-deploy-actions">
+                  {canRetryConfig && onRetryPostDeployConfig && (
+                    <button
+                      type="button"
+                      className="playground-console-action"
+                      onClick={() => {
+                        void onRetryPostDeployConfig();
+                      }}
+                    >
+                      {postDeployConfig.status === 'failed'
+                        ? 'Retry Config'
+                        : 'Apply Config'}
+                    </button>
+                  )}
+                  {canRefreshConfig && onRefreshPostDeployConfig && (
+                    <button
+                      type="button"
+                      className="playground-console-action playground-console-action--secondary"
+                      onClick={() => {
+                        void onRefreshPostDeployConfig();
+                      }}
+                    >
+                      Refresh Readback
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

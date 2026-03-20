@@ -68,6 +68,35 @@ type DependencyResolutionCacheEntry = {
   sanitizedChanged: boolean;
 };
 
+export type PostDeployConfigStatus =
+  | 'idle'
+  | 'ready'
+  | 'applying'
+  | 'failed'
+  | 'applied'
+  | 'verifying'
+  | 'verified';
+
+export type VerifiedGateConfig = {
+  tribeId: number | null;
+  expiryDurationMs: number | null;
+  bountyTypeId: number | null;
+  bountyExpiryMs: number | null;
+  hasBountyConfig: boolean;
+  verifiedAt: string;
+};
+
+export type PostDeployConfigState = {
+  status: PostDeployConfigStatus;
+  packageId?: string;
+  extensionConfigId?: string;
+  adminCapId?: string;
+  configTxDigest?: string;
+  error?: string;
+  requestedConfig?: GateExtensionConfig;
+  verification?: VerifiedGateConfig;
+};
+
 const WORLD_DEPENDENCY_LINE_PATTERN =
   /^\s*world\s*=\s*\{(?=.*git\s*=\s*"https:\/\/github\.com\/evefrontier\/world-contracts\.git")(?=.*subdir\s*=\s*"contracts\/world")(?=.*rev\s*=\s*"[^"]+").*\}\s*$/m;
 
@@ -479,6 +508,37 @@ function findChangedObjectIdByType(
     : undefined;
 }
 
+function coerceNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function extractMoveStructFields(
+  value: unknown,
+): Record<string, unknown> | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+
+  if (
+    'fields' in value &&
+    typeof value.fields === 'object' &&
+    value.fields !== null
+  ) {
+    return value.fields as Record<string, unknown>;
+  }
+
+  return value as Record<string, unknown>;
+}
+
 export function useMoveBuilder(
   files: Record<string, string>,
   options?: {
@@ -493,6 +553,10 @@ export function useMoveBuilder(
   const [packageId, setPackageId] = useState('');
   const [txDigest, setTxDigest] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
+  const [postDeployConfig, setPostDeployConfig] =
+    useState<PostDeployConfigState>({
+      status: 'idle',
+    });
 
   const compilerRef = useRef<Promise<void> | null>(null);
   const versionRef = useRef<string | null>(null);
@@ -695,10 +759,254 @@ export function useMoveBuilder(
       setCompiled(null);
       setPackageId('');
       setTxDigest('');
+      setPostDeployConfig({ status: 'idle' });
     }
 
     previousTargetRef.current = targetId;
   }, [environmentLabel, targetId]);
+
+  const verifyGatePostDeployConfig = useCallback(
+    async (input: {
+      packageId: string;
+      extensionConfigId: string;
+      requestedConfig: GateExtensionConfig;
+      preserveStatusOnFailure?: PostDeployConfigStatus;
+    }): Promise<VerifiedGateConfig | null> => {
+      setPostDeployConfig(prev => ({
+        ...prev,
+        status: 'verifying',
+        error: undefined,
+      }));
+      addLog('🔎 Reading back on-chain gate config…');
+
+      try {
+        const dynamicFields = await suiClient.getDynamicFields({
+          parentId: input.extensionConfigId,
+        });
+
+        const tribeField = dynamicFields.data.find(
+          field =>
+            field.name.type ===
+            `${input.packageId}::tribe_permit::TribeConfigKey`,
+        );
+        const bountyField = dynamicFields.data.find(
+          field =>
+            field.name.type ===
+            `${input.packageId}::corpse_gate_bounty::BountyConfigKey`,
+        );
+
+        const readFieldValue = async (
+          fieldObjectId: string | undefined,
+        ): Promise<Record<string, unknown> | null> => {
+          if (!fieldObjectId) {
+            return null;
+          }
+
+          const response = await suiClient.getObject({
+            id: fieldObjectId,
+            options: { showContent: true },
+          });
+          const content = response.data?.content;
+          if (content?.dataType !== 'moveObject') {
+            return null;
+          }
+
+          const dynamicField = extractMoveStructFields(content.fields);
+          if (dynamicField === null) {
+            return null;
+          }
+
+          return extractMoveStructFields(dynamicField.value);
+        };
+
+        const tribeValue = await readFieldValue(tribeField?.objectId);
+        const bountyValue = await readFieldValue(bountyField?.objectId);
+
+        const verification: VerifiedGateConfig = {
+          tribeId: coerceNumber(tribeValue?.tribe),
+          expiryDurationMs: coerceNumber(tribeValue?.expiry_duration_ms),
+          bountyTypeId: coerceNumber(bountyValue?.bounty_type_id),
+          bountyExpiryMs: coerceNumber(bountyValue?.expiry_duration_ms),
+          hasBountyConfig: bountyField !== undefined,
+          verifiedAt: new Date().toISOString(),
+        };
+
+        setPostDeployConfig(prev => ({
+          ...prev,
+          status: 'verified',
+          verification,
+          error: undefined,
+        }));
+        addLog(
+          `✅ Readback verified tribe_id=${verification.tribeId ?? '-'}, permit_expiry_ms=${verification.expiryDurationMs ?? '-'}`,
+        );
+        if (verification.hasBountyConfig) {
+          addLog(
+            `✅ Readback verified bounty_type_id=${verification.bountyTypeId ?? '-'}, bounty_expiry_ms=${verification.bountyExpiryMs ?? '-'}`,
+          );
+        } else {
+          addLog('✅ Readback verified bounty config is disabled');
+        }
+
+        return verification;
+      } catch (error) {
+        const message = String(error);
+        setPostDeployConfig(prev => ({
+          ...prev,
+          status: input.preserveStatusOnFailure ?? 'applied',
+          error: message,
+        }));
+        addLog(`⚠️ Readback failed: ${message}`);
+        return null;
+      }
+    },
+    [addLog, suiClient],
+  );
+
+  const applyGatePostDeployConfig = useCallback(
+    async (input: {
+      packageId: string;
+      extensionConfigId: string;
+      adminCapId: string;
+      requestedConfig: GateExtensionConfig;
+    }): Promise<void> => {
+      setPostDeployConfig(prev => ({
+        ...prev,
+        status: 'applying',
+        packageId: input.packageId,
+        extensionConfigId: input.extensionConfigId,
+        adminCapId: input.adminCapId,
+        requestedConfig: input.requestedConfig,
+        error: undefined,
+      }));
+
+      addLog('⚙️ Applying post-deploy gate config…');
+      addLog(
+        `  tribe_id=${input.requestedConfig.tribeId}, permit_expiry_ms=${input.requestedConfig.expiryDurationMs}`,
+      );
+
+      const configTx = new Transaction();
+      const extensionConfigObject = configTx.object(input.extensionConfigId);
+      const adminCapObject = configTx.object(input.adminCapId);
+
+      configTx.moveCall({
+        target: `${input.packageId}::tribe_permit::set_tribe_config`,
+        arguments: [
+          extensionConfigObject,
+          adminCapObject,
+          configTx.pure.u32(input.requestedConfig.tribeId),
+          configTx.pure.u64(input.requestedConfig.expiryDurationMs),
+        ],
+      });
+
+      if (input.requestedConfig.bountyTypeId > 0) {
+        addLog(
+          `  bounty_type_id=${input.requestedConfig.bountyTypeId}, bounty_expiry_ms=${input.requestedConfig.bountyExpiryMs}`,
+        );
+        configTx.moveCall({
+          target: `${input.packageId}::corpse_gate_bounty::set_bounty_config`,
+          arguments: [
+            extensionConfigObject,
+            adminCapObject,
+            configTx.pure.u64(input.requestedConfig.bountyTypeId),
+            configTx.pure.u64(input.requestedConfig.bountyExpiryMs),
+          ],
+        });
+      } else {
+        addLog('  bounty config skipped (bounty_type_id = 0)');
+      }
+
+      try {
+        const configRes = await signAndExecuteTransaction({
+          transaction: configTx,
+          chain: walletChain,
+        });
+
+        setPostDeployConfig(prev => ({
+          ...prev,
+          status: 'applied',
+          configTxDigest: configRes.digest,
+          error: undefined,
+        }));
+
+        if (configRes.digest) {
+          addLog(`📜 Config tx digest: ${configRes.digest}`);
+          await suiClient.waitForTransaction({
+            digest: configRes.digest,
+            options: { showEffects: true },
+          });
+        }
+        addLog(`✅ Post-deploy config applied to ${input.extensionConfigId}`);
+
+        await verifyGatePostDeployConfig({
+          packageId: input.packageId,
+          extensionConfigId: input.extensionConfigId,
+          requestedConfig: input.requestedConfig,
+          preserveStatusOnFailure: 'applied',
+        });
+      } catch (error) {
+        const message = String(error);
+        setPostDeployConfig(prev => ({
+          ...prev,
+          status: 'failed',
+          packageId: input.packageId,
+          extensionConfigId: input.extensionConfigId,
+          adminCapId: input.adminCapId,
+          requestedConfig: input.requestedConfig,
+          error: message,
+        }));
+        addLog(`⚠️ Post-deploy config failed: ${message}`);
+        addLog(
+          `⚠️ You can retry later with AdminCap ${input.adminCapId} and ExtensionConfig ${input.extensionConfigId}`,
+        );
+      }
+    },
+    [
+      addLog,
+      signAndExecuteTransaction,
+      suiClient,
+      verifyGatePostDeployConfig,
+      walletChain,
+    ],
+  );
+
+  const onRetryPostDeployConfig = useCallback(async () => {
+    if (
+      postDeployConfig.packageId === undefined ||
+      postDeployConfig.extensionConfigId === undefined ||
+      postDeployConfig.adminCapId === undefined ||
+      postDeployConfig.requestedConfig === undefined
+    ) {
+      addLog('⚠️ No pending post-deploy config to retry');
+      return;
+    }
+
+    await applyGatePostDeployConfig({
+      packageId: postDeployConfig.packageId,
+      extensionConfigId: postDeployConfig.extensionConfigId,
+      adminCapId: postDeployConfig.adminCapId,
+      requestedConfig: postDeployConfig.requestedConfig,
+    });
+  }, [addLog, applyGatePostDeployConfig, postDeployConfig]);
+
+  const onRefreshPostDeployConfig = useCallback(async () => {
+    if (
+      postDeployConfig.packageId === undefined ||
+      postDeployConfig.extensionConfigId === undefined ||
+      postDeployConfig.requestedConfig === undefined
+    ) {
+      addLog('⚠️ No deployed gate config available to refresh');
+      return;
+    }
+
+    await verifyGatePostDeployConfig({
+      packageId: postDeployConfig.packageId,
+      extensionConfigId: postDeployConfig.extensionConfigId,
+      requestedConfig: postDeployConfig.requestedConfig,
+      preserveStatusOnFailure:
+        postDeployConfig.status === 'failed' ? 'failed' : 'applied',
+    });
+  }, [addLog, postDeployConfig, verifyGatePostDeployConfig]);
 
   const onBuild = async () => {
     addLog('── ── ── ── ──');
@@ -708,6 +1016,7 @@ export function useMoveBuilder(
     setCompiled(null);
     setPackageId('');
     setTxDigest('');
+    setPostDeployConfig({ status: 'idle' });
     setBusy(true);
 
     const start = performance.now();
@@ -938,62 +1247,27 @@ export function useMoveBuilder(
             );
 
             if (extensionConfigId && adminCapId) {
-              addLog('⚙️ Applying post-deploy gate config…');
-              addLog(
-                `  tribe_id=${gateDeployConfig.tribeId}, permit_expiry_ms=${gateDeployConfig.expiryDurationMs}`,
-              );
-
-              const configTx = new Transaction();
-              const extensionConfigObject = configTx.object(extensionConfigId);
-              const adminCapObject = configTx.object(adminCapId);
-
-              configTx.moveCall({
-                target: `${createdPkg}::tribe_permit::set_tribe_config`,
-                arguments: [
-                  extensionConfigObject,
-                  adminCapObject,
-                  configTx.pure.u32(gateDeployConfig.tribeId),
-                  configTx.pure.u64(gateDeployConfig.expiryDurationMs),
-                ],
+              setPostDeployConfig({
+                status: 'ready',
+                packageId: createdPkg,
+                extensionConfigId,
+                adminCapId,
+                requestedConfig: gateDeployConfig,
               });
-
-              if (gateDeployConfig.bountyTypeId > 0) {
-                addLog(
-                  `  bounty_type_id=${gateDeployConfig.bountyTypeId}, bounty_expiry_ms=${gateDeployConfig.bountyExpiryMs}`,
-                );
-                configTx.moveCall({
-                  target: `${createdPkg}::corpse_gate_bounty::set_bounty_config`,
-                  arguments: [
-                    extensionConfigObject,
-                    adminCapObject,
-                    configTx.pure.u64(gateDeployConfig.bountyTypeId),
-                    configTx.pure.u64(gateDeployConfig.bountyExpiryMs),
-                  ],
-                });
-              } else {
-                addLog('  bounty config skipped (bounty_type_id = 0)');
-              }
-
-              try {
-                const configRes = await signAndExecuteTransaction({
-                  transaction: configTx,
-                  chain: walletChain,
-                });
-                if (configRes.digest) {
-                  addLog(`📜 Config tx digest: ${configRes.digest}`);
-                  await suiClient.waitForTransaction({
-                    digest: configRes.digest,
-                    options: { showEffects: true },
-                  });
-                }
-                addLog(`✅ Post-deploy config applied to ${extensionConfigId}`);
-              } catch (configError) {
-                addLog(`⚠️ Post-deploy config failed: ${String(configError)}`);
-                addLog(
-                  `⚠️ You can still configure later with AdminCap ${adminCapId} and ExtensionConfig ${extensionConfigId}`,
-                );
-              }
+              await applyGatePostDeployConfig({
+                packageId: createdPkg,
+                extensionConfigId,
+                adminCapId,
+                requestedConfig: gateDeployConfig,
+              });
             } else {
+              setPostDeployConfig({
+                status: 'failed',
+                packageId: createdPkg,
+                requestedConfig: gateDeployConfig,
+                error:
+                  'Could not locate AdminCap / ExtensionConfig object IDs in publish effects.',
+              });
               addLog(
                 '⚠️ Could not locate AdminCap / ExtensionConfig object IDs in publish effects; post-deploy config skipped',
               );
@@ -1027,7 +1301,10 @@ export function useMoveBuilder(
     packageId,
     txDigest,
     isPublishing,
+    postDeployConfig,
     onBuild,
     onDeploy,
+    onRetryPostDeployConfig,
+    onRefreshPostDeployConfig,
   };
 }

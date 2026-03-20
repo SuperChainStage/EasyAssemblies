@@ -73,8 +73,11 @@ export default function PlaygroundPage() {
     packageId,
     txDigest,
     isPublishing,
+    postDeployConfig,
     onBuild,
     onDeploy,
+    onRetryPostDeployConfig,
+    onRefreshPostDeployConfig,
   } = useMoveBuilder(files, {
     templateId,
     config: activeConfig,
@@ -252,6 +255,9 @@ export default function PlaygroundPage() {
             logs={logs}
             packageId={packageId}
             txDigest={txDigest}
+            postDeployConfig={postDeployConfig}
+            onRetryPostDeployConfig={onRetryPostDeployConfig}
+            onRefreshPostDeployConfig={onRefreshPostDeployConfig}
             explorerBaseUrl={explorerBaseUrl}
           />
 
