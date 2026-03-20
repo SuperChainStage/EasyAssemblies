@@ -75,7 +75,10 @@ export default function PlaygroundPage() {
     isPublishing,
     onBuild,
     onDeploy,
-  } = useMoveBuilder(files);
+  } = useMoveBuilder(files, {
+    templateId,
+    config: activeConfig,
+  });
 
   const buildReady = useMemo(() => {
     return (

@@ -5,6 +5,7 @@ import {
 } from '@mysten/dapp-kit';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { SuiObjectChange } from '@mysten/sui/jsonRpc';
 import { Transaction } from '@mysten/sui/transactions';
 import { fromBase64 } from '@mysten/sui/utils';
 
@@ -14,6 +15,11 @@ import {
   type WorldPackageReference,
 } from '@/config/constants';
 import { useNetworkVariables } from '@/config/dapp-kit';
+import {
+  DEFAULT_GATE_CONFIG,
+  type GateExtensionConfig,
+  validateGateConfig,
+} from '@/config/gate-config';
 import {
   buildMovePackage,
   getSuiMoveVersion,
@@ -440,7 +446,46 @@ function sanitizeResolvedDependencies(
   return { resolved: nextResolved, changed };
 }
 
-export function useMoveBuilder(files: Record<string, string>) {
+function resolveGateDeployConfig(
+  templateId: string | null | undefined,
+  rawConfig?: Record<string, unknown>,
+): GateExtensionConfig | null {
+  if (templateId !== 'gate_tribe_permit') {
+    return null;
+  }
+
+  const config: GateExtensionConfig = {
+    ...DEFAULT_GATE_CONFIG,
+    ...(rawConfig as Partial<GateExtensionConfig> | undefined),
+  };
+  const validation = validateGateConfig(config);
+  return validation.valid ? config : null;
+}
+
+function findChangedObjectIdByType(
+  objectChanges: SuiObjectChange[],
+  objectType: string,
+): string | undefined {
+  const match = objectChanges.find(change => {
+    return (
+      'objectId' in change &&
+      'objectType' in change &&
+      change.objectType === objectType
+    );
+  });
+
+  return match !== undefined && 'objectId' in match
+    ? match.objectId
+    : undefined;
+}
+
+export function useMoveBuilder(
+  files: Record<string, string>,
+  options?: {
+    templateId?: string | null;
+    config?: Record<string, unknown>;
+  },
+) {
   const [busy, setBusy] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [buildOk, setBuildOk] = useState<boolean | null>(null);
@@ -471,6 +516,10 @@ export function useMoveBuilder(files: Record<string, string>) {
     walletChain,
     worldPackageReference,
   } = useNetworkVariables();
+  const gateDeployConfig = resolveGateDeployConfig(
+    options?.templateId,
+    options?.config,
+  );
 
   const addLog = useCallback((msg: string) => {
     const ts = new Date().toLocaleTimeString();
@@ -877,6 +926,79 @@ export function useMoveBuilder(files: Record<string, string>) {
         if (createdPkg) {
           addLog(`📦 Package ID: ${createdPkg}`);
           setPackageId(createdPkg);
+
+          if (gateDeployConfig !== null) {
+            const extensionConfigId = findChangedObjectIdByType(
+              objectChanges,
+              `${createdPkg}::config::ExtensionConfig`,
+            );
+            const adminCapId = findChangedObjectIdByType(
+              objectChanges,
+              `${createdPkg}::config::AdminCap`,
+            );
+
+            if (extensionConfigId && adminCapId) {
+              addLog('⚙️ Applying post-deploy gate config…');
+              addLog(
+                `  tribe_id=${gateDeployConfig.tribeId}, permit_expiry_ms=${gateDeployConfig.expiryDurationMs}`,
+              );
+
+              const configTx = new Transaction();
+              const extensionConfigObject = configTx.object(extensionConfigId);
+              const adminCapObject = configTx.object(adminCapId);
+
+              configTx.moveCall({
+                target: `${createdPkg}::tribe_permit::set_tribe_config`,
+                arguments: [
+                  extensionConfigObject,
+                  adminCapObject,
+                  configTx.pure.u32(gateDeployConfig.tribeId),
+                  configTx.pure.u64(gateDeployConfig.expiryDurationMs),
+                ],
+              });
+
+              if (gateDeployConfig.bountyTypeId > 0) {
+                addLog(
+                  `  bounty_type_id=${gateDeployConfig.bountyTypeId}, bounty_expiry_ms=${gateDeployConfig.bountyExpiryMs}`,
+                );
+                configTx.moveCall({
+                  target: `${createdPkg}::corpse_gate_bounty::set_bounty_config`,
+                  arguments: [
+                    extensionConfigObject,
+                    adminCapObject,
+                    configTx.pure.u64(gateDeployConfig.bountyTypeId),
+                    configTx.pure.u64(gateDeployConfig.bountyExpiryMs),
+                  ],
+                });
+              } else {
+                addLog('  bounty config skipped (bounty_type_id = 0)');
+              }
+
+              try {
+                const configRes = await signAndExecuteTransaction({
+                  transaction: configTx,
+                  chain: walletChain,
+                });
+                if (configRes.digest) {
+                  addLog(`📜 Config tx digest: ${configRes.digest}`);
+                  await suiClient.waitForTransaction({
+                    digest: configRes.digest,
+                    options: { showEffects: true },
+                  });
+                }
+                addLog(`✅ Post-deploy config applied to ${extensionConfigId}`);
+              } catch (configError) {
+                addLog(`⚠️ Post-deploy config failed: ${String(configError)}`);
+                addLog(
+                  `⚠️ You can still configure later with AdminCap ${adminCapId} and ExtensionConfig ${extensionConfigId}`,
+                );
+              }
+            } else {
+              addLog(
+                '⚠️ Could not locate AdminCap / ExtensionConfig object IDs in publish effects; post-deploy config skipped',
+              );
+            }
+          }
         } else {
           addLog('Package ID no found in effects');
         }
