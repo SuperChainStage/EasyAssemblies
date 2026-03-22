@@ -5,7 +5,8 @@ import { FileTree, buildFileTree } from '@/components/FileTree';
 import { useNetworkVariable } from '@/config/dapp-kit';
 import { useMoveBuilder } from '@/hooks/useMoveBuilder';
 import { getTemplate } from '@/templates';
-import type { ConfigField } from '@/templates/types';
+import type { ConfigField, ChipTemplateConfig } from '@/templates/types';
+import type { Chip } from '@/templates/chip-types';
 import { useNavigate, useSearchParams } from '@modern-js/runtime/router';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -212,12 +213,17 @@ export default function PlaygroundPage() {
             />
           </div>
 
-          {template?.configFields && activeConfig && (
+          {template?.chipConfig && activeConfig ? (
+            <ChipSummary
+              chipConfig={template.chipConfig}
+              values={activeConfig}
+            />
+          ) : template?.configFields && activeConfig ? (
             <ConfigSummary
               fields={template.configFields}
               values={activeConfig}
             />
-          )}
+          ) : null}
         </div>
 
         {/* Main Column: Editor (Task 1.5) + Console (Task 1.6) */}
@@ -375,6 +381,94 @@ function ConfigSummary({
       {renderSection('Compile-time', '#6366f1', compileFields)}
       {renderSection('Post-deploy', '#8b949e', postDeployFields)}
       {ungroupedFields.length > 0 && ungroupedFields.map(renderRow)}
+    </div>
+  );
+}
+
+function ChipSummary({
+  chipConfig,
+  values,
+}: {
+  chipConfig: ChipTemplateConfig;
+  values: Record<string, unknown>;
+}) {
+  const enabledIds: string[] = Array.isArray(values.enabledChips)
+    ? (values.enabledChips as string[])
+    : [];
+  const moduleName = typeof values.moduleName === 'string' ? values.moduleName : chipConfig.defaultModuleName;
+  const chipMap = new Map<string, Chip>(chipConfig.chips.map(c => [c.id, c]));
+
+  const categoryColors: Record<string, string> = {
+    exclude: '#f87171',
+    weight: '#60a5fa',
+    access: '#34d399',
+    payment: '#fbbf24',
+    config: '#8b949e',
+  };
+
+  return (
+    <div
+      style={{
+        borderTop: '1px solid #333',
+        padding: '12px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        flexShrink: 0,
+        overflow: 'auto',
+      }}
+    >
+      <span
+        style={{
+          fontSize: '12px',
+          color: '#888',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+        }}
+      >
+        Chips
+      </span>
+
+      {/* Module name */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '10px', color: '#6b7280' }}>Package</span>
+        <span style={{ fontSize: '10px', fontFamily: "'JetBrains Mono', monospace", color: '#a5b4fc' }}>
+          {moduleName}
+        </span>
+      </div>
+
+      {/* Chip tags */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+        {enabledIds.map(id => {
+          const chip = chipMap.get(id);
+          if (!chip) return null;
+          const color = categoryColors[chip.category] ?? '#8b949e';
+          return (
+            <span
+              key={id}
+              title={chip.label}
+              style={{
+                fontSize: '10px',
+                fontWeight: 600,
+                fontFamily: "'JetBrains Mono', monospace",
+                padding: '2px 6px',
+                borderRadius: '4px',
+                color,
+                background: `${color}18`,
+                border: `1px solid ${color}30`,
+                lineHeight: '1.2',
+              }}
+            >
+              {id}
+            </span>
+          );
+        })}
+        {enabledIds.length === 0 && (
+          <span style={{ fontSize: '10px', color: '#6b7280', fontStyle: 'italic' }}>
+            No chips selected
+          </span>
+        )}
+      </div>
     </div>
   );
 }

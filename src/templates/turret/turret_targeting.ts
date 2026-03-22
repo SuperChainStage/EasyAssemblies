@@ -14,18 +14,13 @@ import { TURRET_CHIPS } from './chips';
 
 /** Default chip selection — matches "Default Plus" preset. */
 function defaultSelection(): ChipSelection {
-  const preset = TURRET_PRESETS[0]; // Default Plus
+  const preset = TURRET_PRESETS[0];
   return {
     enabledChips: [...preset.chips],
     chipConfigs: preset.chipConfigs ? { ...preset.chipConfigs } : {},
   };
 }
 
-/**
- * Parse the raw config from the URL into a ChipSelection + moduleName.
- * The config object is shaped as:
- *   { moduleName?: string, enabledChips?: string[], chipConfigs?: {...}, preset?: string }
- */
 function parseConfig(raw?: Record<string, unknown>): {
   moduleName: string;
   selection: ChipSelection;
@@ -38,21 +33,6 @@ function parseConfig(raw?: Record<string, unknown>): {
     ? raw.moduleName
     : 'smart_turret_extension';
 
-  // If a preset ID is provided and no explicit chip list, use the preset
-  if (typeof raw.preset === 'string' && !raw.enabledChips) {
-    const preset = TURRET_PRESETS.find(p => p.id === raw.preset);
-    if (preset) {
-      return {
-        moduleName,
-        selection: {
-          enabledChips: [...preset.chips],
-          chipConfigs: { ...preset.chipConfigs },
-        },
-      };
-    }
-  }
-
-  // Explicit chip selection
   const enabledChips = Array.isArray(raw.enabledChips)
     ? (raw.enabledChips as string[])
     : defaultSelection().enabledChips;
@@ -76,36 +56,15 @@ export const turretTargeting: AssemblyTemplate = {
     'Choose from 15 chips (exclude + weight) to compose your ideal ' +
     'targeting strategy, or pick a preset and tweak from there.',
 
-  configFields: [
-    {
-      key: 'moduleName',
-      label: 'Package Name',
-      type: 'string',
-      defaultValue: 'smart_turret_extension',
-      placeholder: 'e.g. my_turret',
-      phase: 'compile',
-      validate: (v) => {
-        if (typeof v !== 'string' || !/^[a-z_][a-z0-9_]*$/.test(v))
-          return 'Only lowercase letters, digits, and underscores.';
-        if (v.length > 64) return 'Max 64 characters.';
-        return null;
-      },
-    },
-    {
-      key: 'preset',
-      label: 'Targeting Preset',
-      type: 'string',
-      defaultValue: 'default_plus',
-      placeholder: TURRET_PRESETS.map(p => p.id).join(' | '),
-      phase: 'compile',
-      validate: (v) => {
-        const validIds = TURRET_PRESETS.map(p => p.id);
-        if (typeof v !== 'string' || !validIds.includes(v))
-          return `Choose: ${validIds.join(', ')}`;
-        return null;
-      },
-    },
-  ],
+  chipConfig: {
+    chips: TURRET_CHIPS,
+    presets: TURRET_PRESETS,
+    categories: [
+      { key: 'exclude', label: 'Exclude Chips', icon: '🛡' },
+      { key: 'weight', label: 'Weight Chips', icon: '⚡' },
+    ],
+    defaultModuleName: 'smart_turret_extension',
+  },
 
   files: (rawConfig?: Record<string, unknown>) => {
     const { moduleName, selection } = parseConfig(rawConfig);
@@ -113,6 +72,5 @@ export const turretTargeting: AssemblyTemplate = {
   },
 };
 
-// Re-export for convenience
 export { TURRET_CHIPS } from './chips';
 export { TURRET_PRESETS } from './presets';

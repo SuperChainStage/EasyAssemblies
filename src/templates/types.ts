@@ -1,15 +1,29 @@
+import type { Chip, Preset } from './chip-types';
+import type { CategoryMeta } from '@/components/ChipSelector';
+
 /** File path mapped to file content */
 export type FileMap = Record<string, string>;
 
 /** EVE Frontier Smart Assembly Template Definition */
 export interface AssemblyTemplate {
-  id: string;                      // Unique identifier (e.g., "gate_tribe_permit")
-  label: string;                   // Display name (e.g., "Smart Gate — Tribe Permit")
-  assemblyType: 'gate' | 'storage_unit' | 'turret';  // Component type
-  description: string;             // Short description
-  detail: string;                  // Detailed explanation
+  id: string;
+  label: string;
+  assemblyType: 'gate' | 'storage_unit' | 'turret';
+  description: string;
+  detail: string;
   files: (config?: Record<string, unknown>) => FileMap | Promise<FileMap>;
+  /** Simple key-value config fields (shown in ConfigForm modal). */
   configFields?: ConfigField[];
+  /** Chip-based config (shown in ChipSelector modal). Takes precedence over configFields. */
+  chipConfig?: ChipTemplateConfig;
+}
+
+/** Describes a template that uses the pluggable chip system. */
+export interface ChipTemplateConfig {
+  chips: Chip[];
+  presets: Preset[];
+  categories: CategoryMeta[];
+  defaultModuleName: string;
 }
 
 export interface ConfigField {

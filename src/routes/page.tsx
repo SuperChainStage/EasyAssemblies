@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { GATE_TEMPLATES, SSU_TEMPLATES, TURRET_TEMPLATES, TEST_TEMPLATES } from '@/templates';
 import type { AssemblyTemplate } from '@/templates/types';
 import { ConfigForm } from '@/components/ConfigForm';
+import { ChipSelector } from '@/components/ChipSelector';
+import type { ChipSelectorResult } from '@/components/ChipSelector';
 
 const ASSEMBLY_GROUPS = [
   { icon: '🛡️', label: 'Smart Gate', templates: GATE_TEMPLATES },
@@ -18,6 +20,7 @@ function TemplateCard({
   template: AssemblyTemplate;
   onClick: () => void;
 }) {
+  const hasChips = !!template.chipConfig;
   return (
     <button
       onClick={onClick}
@@ -68,7 +71,7 @@ function TemplateCard({
           fontWeight: 500,
         }}
       >
-        Open in Playground →
+        {hasChips ? 'Configure chips →' : 'Open in Playground →'}
       </span>
     </button>
   );
@@ -77,9 +80,12 @@ function TemplateCard({
 export default function IndexPage() {
   const navigate = useNavigate();
   const [configTarget, setConfigTarget] = useState<AssemblyTemplate | null>(null);
+  const [chipTarget, setChipTarget] = useState<AssemblyTemplate | null>(null);
 
   const handleTemplateClick = (tpl: AssemblyTemplate) => {
-    if (tpl.configFields && tpl.configFields.length > 0) {
+    if (tpl.chipConfig) {
+      setChipTarget(tpl);
+    } else if (tpl.configFields && tpl.configFields.length > 0) {
       setConfigTarget(tpl);
     } else {
       navigate(`/playground?template=${tpl.id}`);
@@ -95,6 +101,20 @@ export default function IndexPage() {
     setConfigTarget(null);
   };
 
+  const handleChipSubmit = (result: ChipSelectorResult) => {
+    if (!chipTarget) return;
+    const config = {
+      moduleName: result.moduleName,
+      enabledChips: result.selection.enabledChips,
+      chipConfigs: result.selection.chipConfigs,
+    };
+    const params = new URLSearchParams();
+    params.set('template', chipTarget.id);
+    params.set('config', JSON.stringify(config));
+    navigate(`/playground?${params.toString()}`);
+    setChipTarget(null);
+  };
+
   return (
     <div
       style={{
@@ -108,6 +128,7 @@ export default function IndexPage() {
         padding: '60px 24px 80px',
       }}
     >
+      {/* ConfigForm modal (simple key-value templates) */}
       {configTarget && configTarget.configFields && (
         <ConfigForm
           fields={configTarget.configFields}
@@ -116,6 +137,20 @@ export default function IndexPage() {
           onCancel={() => setConfigTarget(null)}
         />
       )}
+
+      {/* ChipSelector modal (chip-based templates) */}
+      {chipTarget && chipTarget.chipConfig && (
+        <ChipSelector
+          title={chipTarget.label}
+          chips={chipTarget.chipConfig.chips}
+          presets={chipTarget.chipConfig.presets}
+          categories={chipTarget.chipConfig.categories}
+          defaultModuleName={chipTarget.chipConfig.defaultModuleName}
+          onSubmit={handleChipSubmit}
+          onCancel={() => setChipTarget(null)}
+        />
+      )}
+
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: '56px', maxWidth: '600px' }}>
         <div
@@ -157,7 +192,6 @@ export default function IndexPage() {
       <div style={{ width: '100%', maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '40px' }}>
         {ASSEMBLY_GROUPS.map((group) => (
           <section key={group.label}>
-            {/* Group Header */}
             <div
               style={{
                 display: 'flex',
@@ -185,7 +219,6 @@ export default function IndexPage() {
               </span>
             </div>
 
-            {/* Template Cards or Empty State */}
             {group.templates.length > 0 ? (
               <div
                 style={{
@@ -213,7 +246,7 @@ export default function IndexPage() {
                   fontSize: '13px',
                 }}
               >
-                Coming in Phase 5…
+                Coming soon...
               </div>
             )}
           </section>
