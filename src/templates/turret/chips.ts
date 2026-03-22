@@ -51,7 +51,7 @@ const E3_CEASEFIRE: Chip = {
   defaultEnabled: true,
   codeSnippet: () => `
         // [E3] Ceasefire Detection
-        if (turret::behaviour_change(candidate) == turret::BehaviourChangeReason::STOPPED_ATTACK) {
+        if (behaviour_to_u8(turret::behaviour_change(candidate)) == STOPPED_ATTACK) {
             excluded = true;
         };`,
 };
@@ -134,7 +134,7 @@ const W1_AGGRESSOR: Chip = {
   defaultEnabled: true,
   codeSnippet: () => `
             // [W1] Aggressor Priority
-            if (turret::behaviour_change(candidate) == turret::BehaviourChangeReason::STARTED_ATTACK) {
+            if (behaviour_to_u8(turret::behaviour_change(candidate)) == STARTED_ATTACK) {
                 weight = weight + 10000;
             };`,
 };
@@ -148,7 +148,7 @@ const W2_PROXIMITY: Chip = {
   defaultEnabled: true,
   codeSnippet: () => `
             // [W2] Proximity Alert
-            if (turret::behaviour_change(candidate) == turret::BehaviourChangeReason::ENTERED) {
+            if (behaviour_to_u8(turret::behaviour_change(candidate)) == ENTERED) {
                 if (turret::character_tribe(candidate) != owner_tribe || turret::is_aggressor(candidate)) {
                     weight = weight + 1000;
                 };
