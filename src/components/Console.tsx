@@ -122,7 +122,7 @@ export function Console({
   const canRefreshConfig =
     postDeployConfig?.packageId !== undefined &&
     postDeployConfig.extensionConfigId !== undefined &&
-    postDeployConfig.requestedConfig !== undefined &&
+    postDeployConfig.requestedPlan !== undefined &&
     postDeployConfig.status !== 'applying' &&
     postDeployConfig.status !== 'verifying';
 
@@ -246,38 +246,15 @@ export function Console({
                   </a>
                 </div>
               )}
-              {postDeployConfig.verification && (
-                <>
-                  <div className="playground-deploy-row">
-                    <span className="playground-deploy-label">Tribe</span>
-                    <code className="playground-deploy-value">
-                      {postDeployConfig.verification.tribeId ?? '-'}
-                    </code>
-                  </div>
-                  <div className="playground-deploy-row">
-                    <span className="playground-deploy-label">Permit Ms</span>
-                    <code className="playground-deploy-value">
-                      {postDeployConfig.verification.expiryDurationMs ?? '-'}
-                    </code>
-                  </div>
-                  <div className="playground-deploy-row">
-                    <span className="playground-deploy-label">Bounty</span>
-                    <code className="playground-deploy-value">
-                      {postDeployConfig.verification.hasBountyConfig
-                        ? (postDeployConfig.verification.bountyTypeId ?? '-')
-                        : 'disabled'}
-                    </code>
-                  </div>
-                  <div className="playground-deploy-row">
-                    <span className="playground-deploy-label">Bounty Ms</span>
-                    <code className="playground-deploy-value">
-                      {postDeployConfig.verification.hasBountyConfig
-                        ? (postDeployConfig.verification.bountyExpiryMs ?? '-')
-                        : 'disabled'}
-                    </code>
-                  </div>
-                </>
-              )}
+              {postDeployConfig.verification?.rows.map(row => (
+                <div
+                  key={`${row.label}:${row.value}`}
+                  className="playground-deploy-row"
+                >
+                  <span className="playground-deploy-label">{row.label}</span>
+                  <code className="playground-deploy-value">{row.value}</code>
+                </div>
+              ))}
               {postDeployConfig.error && (
                 <div className="playground-deploy-row">
                   <span className="playground-deploy-label">Config Err</span>

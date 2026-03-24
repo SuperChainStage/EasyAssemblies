@@ -16,11 +16,6 @@ import {
 } from '@/config/constants';
 import { useNetworkVariables } from '@/config/dapp-kit';
 import {
-  DEFAULT_GATE_CONFIG,
-  type GateExtensionConfig,
-  validateGateConfig,
-} from '@/config/gate-config';
-import {
   buildMovePackage,
   getSuiMoveVersion,
   initMoveCompiler,
@@ -68,6 +63,32 @@ type DependencyResolutionCacheEntry = {
   sanitizedChanged: boolean;
 };
 
+type GatePostDeployRule =
+  | {
+      kind: 'tribe';
+      module: 'tribe_permit' | 'multi_rule';
+      tribeId: number;
+      expiryDurationMs?: number;
+    }
+  | {
+      kind: 'toll';
+      module: 'toll_gate' | 'multi_rule';
+      price: number;
+      ownerAddress?: string;
+      expiryDurationMs?: number;
+    }
+  | {
+      kind: 'bounty';
+      module: 'bounty_gate';
+      bountyTypeId: number;
+      expiryDurationMs: number;
+    };
+
+type GatePostDeployPlan = {
+  templateId: string;
+  rules: GatePostDeployRule[];
+};
+
 export type PostDeployConfigStatus =
   | 'idle'
   | 'ready'
@@ -78,11 +99,10 @@ export type PostDeployConfigStatus =
   | 'verified';
 
 export type VerifiedGateConfig = {
-  tribeId: number | null;
-  expiryDurationMs: number | null;
-  bountyTypeId: number | null;
-  bountyExpiryMs: number | null;
-  hasBountyConfig: boolean;
+  rows: Array<{
+    label: string;
+    value: string;
+  }>;
   verifiedAt: string;
 };
 
@@ -93,9 +113,14 @@ export type PostDeployConfigState = {
   adminCapId?: string;
   configTxDigest?: string;
   error?: string;
-  requestedConfig?: GateExtensionConfig;
+  requestedPlan?: GatePostDeployPlan;
   verification?: VerifiedGateConfig;
 };
+
+const DEFAULT_TRIBE_ID = 100;
+const DEFAULT_EXPIRY_MS = 3_600_000;
+const DEFAULT_PRICE_MIST = 100_000_000;
+const DEFAULT_BOUNTY_TYPE_ID = 1001;
 
 const WORLD_DEPENDENCY_LINE_PATTERN =
   /^\s*world\s*=\s*\{(?=.*git\s*=\s*"https:\/\/github\.com\/evefrontier\/world-contracts\.git")(?=.*subdir\s*=\s*"contracts\/world")(?=.*rev\s*=\s*"[^"]+").*\}\s*$/m;
@@ -475,20 +500,207 @@ function sanitizeResolvedDependencies(
   return { resolved: nextResolved, changed };
 }
 
-function resolveGateDeployConfig(
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function defaultGateEnabledChips(
+  templateId: string | null | undefined,
+): string[] {
+  switch (templateId) {
+    case 'gate_tribe_permit':
+      return ['A1', 'C1'];
+    case 'gate_toll':
+      return ['P1', 'R1', 'C1'];
+    case 'gate_bounty':
+      return ['I1', 'C1'];
+    case 'gate_open_permit':
+      return ['C1'];
+    case 'gate_multi_rule':
+      return ['A1', 'P1', 'R1', 'C1'];
+    default:
+      return [];
+  }
+}
+
+function resolveEnabledChips(
   templateId: string | null | undefined,
   rawConfig?: Record<string, unknown>,
-): GateExtensionConfig | null {
-  if (templateId !== 'gate_tribe_permit') {
+): Set<string> {
+  const enabled = Array.isArray(rawConfig?.enabledChips)
+    ? rawConfig.enabledChips.filter(
+        (value): value is string => typeof value === 'string',
+      )
+    : defaultGateEnabledChips(templateId);
+
+  return new Set(enabled);
+}
+
+function resolveChipConfigs(
+  rawConfig?: Record<string, unknown>,
+): Record<string, Record<string, unknown>> {
+  if (!isRecord(rawConfig?.chipConfigs)) {
+    return {};
+  }
+
+  const chipConfigs: Record<string, Record<string, unknown>> = {};
+  for (const [chipId, value] of Object.entries(rawConfig.chipConfigs)) {
+    if (isRecord(value)) {
+      chipConfigs[chipId] = value;
+    }
+  }
+  return chipConfigs;
+}
+
+function readNumericConfig(
+  rawConfig: Record<string, unknown> | undefined,
+  chipConfigs: Record<string, Record<string, unknown>>,
+  chipId: string,
+  key: string,
+  fallback: number,
+  allowZero = false,
+): number {
+  const rawValue = chipConfigs[chipId]?.[key] ?? rawConfig?.[key];
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  if (allowZero ? parsed >= 0 : parsed > 0) {
+    return Math.trunc(parsed);
+  }
+  return fallback;
+}
+
+function readStringConfig(
+  rawConfig: Record<string, unknown> | undefined,
+  chipConfigs: Record<string, Record<string, unknown>>,
+  chipId: string,
+  key: string,
+  fallback = '',
+): string {
+  const rawValue = chipConfigs[chipId]?.[key] ?? rawConfig?.[key];
+  return typeof rawValue === 'string' ? rawValue.trim() : fallback;
+}
+
+function resolveGateDeployPlan(
+  templateId: string | null | undefined,
+  rawConfig?: Record<string, unknown>,
+): GatePostDeployPlan | null {
+  if (
+    templateId !== 'gate_tribe_permit' &&
+    templateId !== 'gate_toll' &&
+    templateId !== 'gate_bounty' &&
+    templateId !== 'gate_open_permit' &&
+    templateId !== 'gate_multi_rule'
+  ) {
     return null;
   }
 
-  const config: GateExtensionConfig = {
-    ...DEFAULT_GATE_CONFIG,
-    ...(rawConfig as Partial<GateExtensionConfig> | undefined),
-  };
-  const validation = validateGateConfig(config);
-  return validation.valid ? config : null;
+  const enabledChips = resolveEnabledChips(templateId, rawConfig);
+  const chipConfigs = resolveChipConfigs(rawConfig);
+  const expiryDurationMs = readNumericConfig(
+    rawConfig,
+    chipConfigs,
+    'C1',
+    'expiryDurationMs',
+    DEFAULT_EXPIRY_MS,
+  );
+  const tribeId = readNumericConfig(
+    rawConfig,
+    chipConfigs,
+    'A1',
+    'tribeId',
+    DEFAULT_TRIBE_ID,
+  );
+  const price = readNumericConfig(
+    rawConfig,
+    chipConfigs,
+    'P1',
+    'price',
+    DEFAULT_PRICE_MIST,
+    true,
+  );
+  const ownerAddress = readStringConfig(
+    rawConfig,
+    chipConfigs,
+    'R1',
+    'ownerAddress',
+  );
+  const bountyTypeId = readNumericConfig(
+    rawConfig,
+    chipConfigs,
+    'I1',
+    'bountyTypeId',
+    DEFAULT_BOUNTY_TYPE_ID,
+    true,
+  );
+
+  switch (templateId) {
+    case 'gate_tribe_permit':
+      return enabledChips.has('A1')
+        ? {
+            templateId,
+            rules: [
+              {
+                kind: 'tribe',
+                module: 'tribe_permit',
+                tribeId,
+                expiryDurationMs,
+              },
+            ],
+          }
+        : null;
+    case 'gate_toll':
+      return enabledChips.has('P1')
+        ? {
+            templateId,
+            rules: [
+              {
+                kind: 'toll',
+                module: 'toll_gate',
+                price,
+                ownerAddress,
+                expiryDurationMs,
+              },
+            ],
+          }
+        : null;
+    case 'gate_bounty':
+      return {
+        templateId,
+        rules: [
+          {
+            kind: 'bounty',
+            module: 'bounty_gate',
+            bountyTypeId: enabledChips.has('I1') ? bountyTypeId : 0,
+            expiryDurationMs,
+          },
+        ],
+      };
+    case 'gate_open_permit':
+      return null;
+    case 'gate_multi_rule': {
+      const rules: GatePostDeployRule[] = [];
+      if (enabledChips.has('A1')) {
+        rules.push({
+          kind: 'tribe',
+          module: 'multi_rule',
+          tribeId,
+        });
+      }
+      if (enabledChips.has('P1')) {
+        rules.push({
+          kind: 'toll',
+          module: 'multi_rule',
+          price,
+          ownerAddress,
+        });
+      }
+      return rules.length > 0 ? { templateId, rules } : null;
+    }
+    default:
+      return null;
+  }
 }
 
 function findChangedObjectIdByType(
@@ -580,7 +792,7 @@ export function useMoveBuilder(
     walletChain,
     worldPackageReference,
   } = useNetworkVariables();
-  const gateDeployConfig = resolveGateDeployConfig(
+  const gateDeployPlan = resolveGateDeployPlan(
     options?.templateId,
     options?.config,
   );
@@ -769,7 +981,7 @@ export function useMoveBuilder(
     async (input: {
       packageId: string;
       extensionConfigId: string;
-      requestedConfig: GateExtensionConfig;
+      requestedPlan: GatePostDeployPlan;
       preserveStatusOnFailure?: PostDeployConfigStatus;
     }): Promise<VerifiedGateConfig | null> => {
       setPostDeployConfig(prev => ({
@@ -783,21 +995,14 @@ export function useMoveBuilder(
         const dynamicFields = await suiClient.getDynamicFields({
           parentId: input.extensionConfigId,
         });
-
-        const tribeField = dynamicFields.data.find(
-          field =>
-            field.name.type ===
-            `${input.packageId}::tribe_permit::TribeConfigKey`,
-        );
-        const bountyField = dynamicFields.data.find(
-          field =>
-            field.name.type ===
-            `${input.packageId}::corpse_gate_bounty::BountyConfigKey`,
+        const objectIdByFieldType = new Map(
+          dynamicFields.data.map(field => [field.name.type, field.objectId]),
         );
 
         const readFieldValue = async (
-          fieldObjectId: string | undefined,
+          fieldType: string,
         ): Promise<Record<string, unknown> | null> => {
+          const fieldObjectId = objectIdByFieldType.get(fieldType);
           if (!fieldObjectId) {
             return null;
           }
@@ -818,16 +1023,74 @@ export function useMoveBuilder(
 
           return extractMoveStructFields(dynamicField.value);
         };
+        const rows: VerifiedGateConfig['rows'] = [];
 
-        const tribeValue = await readFieldValue(tribeField?.objectId);
-        const bountyValue = await readFieldValue(bountyField?.objectId);
+        for (const rule of input.requestedPlan.rules) {
+          switch (rule.kind) {
+            case 'tribe': {
+              const tribeValue = await readFieldValue(
+                `${input.packageId}::${rule.module}::TribeConfigKey`,
+              );
+              rows.push({
+                label: 'Tribe',
+                value: String(coerceNumber(tribeValue?.tribe) ?? '-'),
+              });
+              if (rule.expiryDurationMs !== undefined) {
+                rows.push({
+                  label: 'Permit Ms',
+                  value: String(
+                    coerceNumber(tribeValue?.expiry_duration_ms) ?? '-',
+                  ),
+                });
+              }
+              break;
+            }
+            case 'toll': {
+              const tollValue = await readFieldValue(
+                `${input.packageId}::${rule.module}::TollConfigKey`,
+              );
+              rows.push({
+                label: 'Price',
+                value: String(coerceNumber(tollValue?.price) ?? '-'),
+              });
+              rows.push({
+                label: 'Owner',
+                value:
+                  typeof tollValue?.owner_address === 'string'
+                    ? tollValue.owner_address
+                    : '-',
+              });
+              if (rule.expiryDurationMs !== undefined) {
+                rows.push({
+                  label: 'Permit Ms',
+                  value: String(
+                    coerceNumber(tollValue?.expiry_duration_ms) ?? '-',
+                  ),
+                });
+              }
+              break;
+            }
+            case 'bounty': {
+              const bountyValue = await readFieldValue(
+                `${input.packageId}::${rule.module}::BountyConfigKey`,
+              );
+              rows.push({
+                label: 'Bounty Type',
+                value: String(coerceNumber(bountyValue?.bounty_type_id) ?? '-'),
+              });
+              rows.push({
+                label: 'Permit Ms',
+                value: String(
+                  coerceNumber(bountyValue?.expiry_duration_ms) ?? '-',
+                ),
+              });
+              break;
+            }
+          }
+        }
 
         const verification: VerifiedGateConfig = {
-          tribeId: coerceNumber(tribeValue?.tribe),
-          expiryDurationMs: coerceNumber(tribeValue?.expiry_duration_ms),
-          bountyTypeId: coerceNumber(bountyValue?.bounty_type_id),
-          bountyExpiryMs: coerceNumber(bountyValue?.expiry_duration_ms),
-          hasBountyConfig: bountyField !== undefined,
+          rows,
           verifiedAt: new Date().toISOString(),
         };
 
@@ -837,15 +1100,12 @@ export function useMoveBuilder(
           verification,
           error: undefined,
         }));
-        addLog(
-          `✅ Readback verified tribe_id=${verification.tribeId ?? '-'}, permit_expiry_ms=${verification.expiryDurationMs ?? '-'}`,
-        );
-        if (verification.hasBountyConfig) {
-          addLog(
-            `✅ Readback verified bounty_type_id=${verification.bountyTypeId ?? '-'}, bounty_expiry_ms=${verification.bountyExpiryMs ?? '-'}`,
-          );
+        if (verification.rows.length === 0) {
+          addLog('✅ Readback verified no dynamic gate rules');
         } else {
-          addLog('✅ Readback verified bounty config is disabled');
+          for (const row of verification.rows) {
+            addLog(`✅ Readback verified ${row.label}: ${row.value}`);
+          }
         }
 
         return verification;
@@ -868,7 +1128,7 @@ export function useMoveBuilder(
       packageId: string;
       extensionConfigId: string;
       adminCapId: string;
-      requestedConfig: GateExtensionConfig;
+      requestedPlan: GatePostDeployPlan;
     }): Promise<void> => {
       setPostDeployConfig(prev => ({
         ...prev,
@@ -876,44 +1136,99 @@ export function useMoveBuilder(
         packageId: input.packageId,
         extensionConfigId: input.extensionConfigId,
         adminCapId: input.adminCapId,
-        requestedConfig: input.requestedConfig,
+        requestedPlan: input.requestedPlan,
+        verification: undefined,
         error: undefined,
       }));
 
       addLog('⚙️ Applying post-deploy gate config…');
-      addLog(
-        `  tribe_id=${input.requestedConfig.tribeId}, permit_expiry_ms=${input.requestedConfig.expiryDurationMs}`,
-      );
 
       const configTx = new Transaction();
       const extensionConfigObject = configTx.object(input.extensionConfigId);
       const adminCapObject = configTx.object(input.adminCapId);
 
-      configTx.moveCall({
-        target: `${input.packageId}::tribe_permit::set_tribe_config`,
-        arguments: [
-          extensionConfigObject,
-          adminCapObject,
-          configTx.pure.u32(input.requestedConfig.tribeId),
-          configTx.pure.u64(input.requestedConfig.expiryDurationMs),
-        ],
-      });
+      for (const rule of input.requestedPlan.rules) {
+        switch (rule.kind) {
+          case 'tribe':
+            if (rule.module === 'tribe_permit') {
+              addLog(
+                `  tribe_permit.tribe_id=${rule.tribeId}, permit_expiry_ms=${rule.expiryDurationMs ?? DEFAULT_EXPIRY_MS}`,
+              );
+              configTx.moveCall({
+                target: `${input.packageId}::tribe_permit::set_tribe_config`,
+                arguments: [
+                  extensionConfigObject,
+                  adminCapObject,
+                  configTx.pure.u32(rule.tribeId),
+                  configTx.pure.u64(rule.expiryDurationMs ?? DEFAULT_EXPIRY_MS),
+                ],
+              });
+            } else {
+              addLog(`  multi_rule.tribe_id=${rule.tribeId}`);
+              configTx.moveCall({
+                target: `${input.packageId}::multi_rule::set_tribe_config`,
+                arguments: [
+                  extensionConfigObject,
+                  adminCapObject,
+                  configTx.pure.u32(rule.tribeId),
+                ],
+              });
+            }
+            break;
+          case 'toll': {
+            const ownerAddress =
+              rule.ownerAddress && rule.ownerAddress.length > 0
+                ? rule.ownerAddress
+                : account?.address;
+            if (!ownerAddress) {
+              throw new Error(
+                'Missing owner address for toll config; connect a wallet or provide one explicitly.',
+              );
+            }
 
-      if (input.requestedConfig.bountyTypeId > 0) {
-        addLog(
-          `  bounty_type_id=${input.requestedConfig.bountyTypeId}, bounty_expiry_ms=${input.requestedConfig.bountyExpiryMs}`,
-        );
-        configTx.moveCall({
-          target: `${input.packageId}::corpse_gate_bounty::set_bounty_config`,
-          arguments: [
-            extensionConfigObject,
-            adminCapObject,
-            configTx.pure.u64(input.requestedConfig.bountyTypeId),
-            configTx.pure.u64(input.requestedConfig.bountyExpiryMs),
-          ],
-        });
-      } else {
-        addLog('  bounty config skipped (bounty_type_id = 0)');
+            if (rule.module === 'toll_gate') {
+              addLog(
+                `  toll_gate.price=${rule.price}, owner=${ownerAddress}, permit_expiry_ms=${rule.expiryDurationMs ?? DEFAULT_EXPIRY_MS}`,
+              );
+              configTx.moveCall({
+                target: `${input.packageId}::toll_gate::set_toll_config`,
+                arguments: [
+                  extensionConfigObject,
+                  adminCapObject,
+                  configTx.pure.u64(rule.price),
+                  configTx.pure.address(ownerAddress),
+                  configTx.pure.u64(rule.expiryDurationMs ?? DEFAULT_EXPIRY_MS),
+                ],
+              });
+            } else {
+              addLog(`  multi_rule.price=${rule.price}, owner=${ownerAddress}`);
+              configTx.moveCall({
+                target: `${input.packageId}::multi_rule::set_toll_config`,
+                arguments: [
+                  extensionConfigObject,
+                  adminCapObject,
+                  configTx.pure.u64(rule.price),
+                  configTx.pure.address(ownerAddress),
+                ],
+              });
+            }
+            break;
+          }
+          case 'bounty':
+            addLog(
+              `  bounty_gate.bounty_type_id=${rule.bountyTypeId}, permit_expiry_ms=${rule.expiryDurationMs}`,
+            );
+            configTx.moveCall({
+              target: `${input.packageId}::bounty_gate::set_bounty_config`,
+              arguments: [
+                extensionConfigObject,
+                adminCapObject,
+                configTx.pure.u64(rule.bountyTypeId),
+                configTx.pure.u64(rule.expiryDurationMs),
+              ],
+            });
+            break;
+        }
       }
 
       try {
@@ -941,7 +1256,7 @@ export function useMoveBuilder(
         await verifyGatePostDeployConfig({
           packageId: input.packageId,
           extensionConfigId: input.extensionConfigId,
-          requestedConfig: input.requestedConfig,
+          requestedPlan: input.requestedPlan,
           preserveStatusOnFailure: 'applied',
         });
       } catch (error) {
@@ -952,7 +1267,7 @@ export function useMoveBuilder(
           packageId: input.packageId,
           extensionConfigId: input.extensionConfigId,
           adminCapId: input.adminCapId,
-          requestedConfig: input.requestedConfig,
+          requestedPlan: input.requestedPlan,
           error: message,
         }));
         addLog(`⚠️ Post-deploy config failed: ${message}`);
@@ -962,6 +1277,7 @@ export function useMoveBuilder(
       }
     },
     [
+      account,
       addLog,
       signAndExecuteTransaction,
       suiClient,
@@ -975,7 +1291,7 @@ export function useMoveBuilder(
       postDeployConfig.packageId === undefined ||
       postDeployConfig.extensionConfigId === undefined ||
       postDeployConfig.adminCapId === undefined ||
-      postDeployConfig.requestedConfig === undefined
+      postDeployConfig.requestedPlan === undefined
     ) {
       addLog('⚠️ No pending post-deploy config to retry');
       return;
@@ -985,7 +1301,7 @@ export function useMoveBuilder(
       packageId: postDeployConfig.packageId,
       extensionConfigId: postDeployConfig.extensionConfigId,
       adminCapId: postDeployConfig.adminCapId,
-      requestedConfig: postDeployConfig.requestedConfig,
+      requestedPlan: postDeployConfig.requestedPlan,
     });
   }, [addLog, applyGatePostDeployConfig, postDeployConfig]);
 
@@ -993,7 +1309,7 @@ export function useMoveBuilder(
     if (
       postDeployConfig.packageId === undefined ||
       postDeployConfig.extensionConfigId === undefined ||
-      postDeployConfig.requestedConfig === undefined
+      postDeployConfig.requestedPlan === undefined
     ) {
       addLog('⚠️ No deployed gate config available to refresh');
       return;
@@ -1002,7 +1318,7 @@ export function useMoveBuilder(
     await verifyGatePostDeployConfig({
       packageId: postDeployConfig.packageId,
       extensionConfigId: postDeployConfig.extensionConfigId,
-      requestedConfig: postDeployConfig.requestedConfig,
+      requestedPlan: postDeployConfig.requestedPlan,
       preserveStatusOnFailure:
         postDeployConfig.status === 'failed' ? 'failed' : 'applied',
     });
@@ -1236,7 +1552,7 @@ export function useMoveBuilder(
           addLog(`📦 Package ID: ${createdPkg}`);
           setPackageId(createdPkg);
 
-          if (gateDeployConfig !== null) {
+          if (gateDeployPlan !== null) {
             const extensionConfigId = findChangedObjectIdByType(
               objectChanges,
               `${createdPkg}::config::ExtensionConfig`,
@@ -1252,19 +1568,19 @@ export function useMoveBuilder(
                 packageId: createdPkg,
                 extensionConfigId,
                 adminCapId,
-                requestedConfig: gateDeployConfig,
+                requestedPlan: gateDeployPlan,
               });
               await applyGatePostDeployConfig({
                 packageId: createdPkg,
                 extensionConfigId,
                 adminCapId,
-                requestedConfig: gateDeployConfig,
+                requestedPlan: gateDeployPlan,
               });
             } else {
               setPostDeployConfig({
                 status: 'failed',
                 packageId: createdPkg,
-                requestedConfig: gateDeployConfig,
+                requestedPlan: gateDeployPlan,
                 error:
                   'Could not locate AdminCap / ExtensionConfig object IDs in publish effects.',
               });
@@ -1272,6 +1588,10 @@ export function useMoveBuilder(
                 '⚠️ Could not locate AdminCap / ExtensionConfig object IDs in publish effects; post-deploy config skipped',
               );
             }
+          } else if (options?.templateId?.startsWith('gate_')) {
+            addLog(
+              'ℹ️ This gate configuration is compile-time only; no post-deploy config transaction is required',
+            );
           }
         } else {
           addLog('Package ID no found in effects');

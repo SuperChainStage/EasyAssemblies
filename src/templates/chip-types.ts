@@ -17,6 +17,7 @@ export interface ChipConfigField {
   defaultValue: unknown;
   placeholder?: string;
   options?: { label: string; value: unknown }[];
+  phase?: 'compile' | 'post-deploy';
 }
 
 // ---------------------------------------------------------------------------
@@ -103,10 +104,7 @@ export function resolveConflicts(
 }
 
 /** Check whether a chip selection matches a preset exactly. */
-export function matchesPreset(
-  selection: string[],
-  preset: Preset,
-): boolean {
+export function matchesPreset(selection: string[], preset: Preset): boolean {
   if (selection.length !== preset.chips.length) return false;
   const sorted = [...selection].sort();
   const presetSorted = [...preset.chips].sort();

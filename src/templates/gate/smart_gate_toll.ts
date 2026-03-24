@@ -57,7 +57,7 @@ export const gateToll: AssemblyTemplate = {
     presets: TOLL_GATE_PRESETS,
     categories: [
       { key: 'payment', label: 'Payment Rules', icon: '💰' },
-      { key: 'revenue', label: 'Revenue Handling', icon: '🏦' },
+      { key: 'revenue', label: 'Revenue', icon: '🏦' },
       { key: 'config', label: 'Configuration', icon: '⚙️' },
     ],
     defaultModuleName: 'smart_gate_extension',

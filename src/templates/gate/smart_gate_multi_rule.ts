@@ -59,7 +59,7 @@ export const gateMultiRule: AssemblyTemplate = {
     categories: [
       { key: 'access', label: 'Access Control', icon: '🔐' },
       { key: 'payment', label: 'Payment Rules', icon: '💰' },
-      { key: 'revenue', label: 'Revenue Handling', icon: '🏦' },
+      { key: 'revenue', label: 'Revenue', icon: '🏦' },
       { key: 'config', label: 'Configuration', icon: '⚙️' },
     ],
     defaultModuleName: 'smart_gate_extension',

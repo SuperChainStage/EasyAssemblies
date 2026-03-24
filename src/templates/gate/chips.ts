@@ -4,7 +4,7 @@
  * Categories:
  *   access  (A1–A3): Tribe-based access control       → Tribe Permit, Multi-Rule
  *   payment (P1–P3): Token payment logic               → Toll Gate, Multi-Rule
- *   revenue (R1–R2): Revenue handling                  → Toll Gate, Multi-Rule
+ *   revenue (R1):    Revenue handling                  → Toll Gate, Multi-Rule
  *   item    (I1–I3): Item/bounty validation            → Bounty Gate
  *   config  (C1):    Permit expiry                     → All templates
  *
@@ -26,6 +26,15 @@ const A1_SINGLE_TRIBE: Chip = {
   label: 'Single Tribe',
   description: 'Only characters belonging to the configured tribe may pass.',
   defaultEnabled: true,
+  configFields: [
+    {
+      key: 'tribeId',
+      label: 'Allowed Tribe ID',
+      type: 'number' as const,
+      defaultValue: 100,
+      phase: 'post-deploy',
+    },
+  ],
   codeSnippet: () => `
     // [A1] Single Tribe Check
     assert!(extension_config.has_rule<TribeConfigKey>(TribeConfigKey {}), ENoTribeConfig);
@@ -48,11 +57,15 @@ const A2_MULTI_TRIBE: Chip = {
       type: 'string' as const,
       defaultValue: '100,200,300',
       placeholder: 'e.g. 100,200,300',
+      phase: 'compile',
     },
   ],
-  codeSnippet: (params) => {
+  codeSnippet: params => {
     const raw = String(params?.allowedTribes ?? '100,200,300');
-    const ids = raw.split(',').map(s => s.trim()).filter(Boolean);
+    const ids = raw
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
     return `
     // [A2] Multi-Tribe Whitelist
     {
@@ -75,7 +88,8 @@ const A3_TRIBE_BLACKLIST: Chip = {
   selectionMode: 'radio',
   radioGroup: 'access_mode',
   label: 'Tribe Blacklist',
-  description: 'Block characters from the listed tribes; everyone else may pass.',
+  description:
+    'Block characters from the listed tribes; everyone else may pass.',
   defaultEnabled: false,
   configFields: [
     {
@@ -84,11 +98,15 @@ const A3_TRIBE_BLACKLIST: Chip = {
       type: 'string' as const,
       defaultValue: '500,600',
       placeholder: 'e.g. 500,600',
+      phase: 'compile',
     },
   ],
-  codeSnippet: (params) => {
+  codeSnippet: params => {
     const raw = String(params?.blockedTribes ?? '500,600');
-    const ids = raw.split(',').map(s => s.trim()).filter(Boolean);
+    const ids = raw
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
     return `
     // [A3] Tribe Blacklist
     {
@@ -114,11 +132,21 @@ const P1_FIXED_PRICE: Chip = {
   label: 'Fixed Price',
   description: 'Require a fixed SUI payment to pass through the gate.',
   defaultEnabled: true,
+  configFields: [
+    {
+      key: 'price',
+      label: 'Price (MIST)',
+      type: 'number' as const,
+      defaultValue: 100_000_000,
+      placeholder: '100000000 = 0.1 SUI',
+      phase: 'post-deploy',
+    },
+  ],
   codeSnippet: () => `
     // [P1] Fixed Price
     assert!(extension_config.has_rule<TollConfigKey>(TollConfigKey {}), ENoTollConfig);
     let toll_cfg = extension_config.borrow_rule<TollConfigKey, TollConfig>(TollConfigKey {});
-    let required_price = toll_cfg.price;`,
+    let mut required_price = toll_cfg.price;`,
 };
 
 const P2_TRIBE_DISCOUNT: Chip = {
@@ -135,17 +163,22 @@ const P2_TRIBE_DISCOUNT: Chip = {
       type: 'string' as const,
       defaultValue: '100,200',
       placeholder: 'e.g. 100,200',
+      phase: 'compile',
     },
     {
       key: 'discountPct',
       label: 'Discount percentage (0-99)',
       type: 'number' as const,
       defaultValue: 50,
+      phase: 'compile',
     },
   ],
-  codeSnippet: (params) => {
+  codeSnippet: params => {
     const raw = String(params?.discountTribes ?? '100,200');
-    const ids = raw.split(',').map(s => s.trim()).filter(Boolean);
+    const ids = raw
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
     const pct = Number(params?.discountPct ?? 50);
     return `
     // [P2] Tribe Discount
@@ -177,11 +210,15 @@ const P3_FREE_FOR_TRIBE: Chip = {
       type: 'string' as const,
       defaultValue: '100',
       placeholder: 'e.g. 100',
+      phase: 'compile',
     },
   ],
-  codeSnippet: (params) => {
+  codeSnippet: params => {
     const raw = String(params?.freeTribes ?? '100');
-    const ids = raw.split(',').map(s => s.trim()).filter(Boolean);
+    const ids = raw
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
     return `
     // [P3] Free for Tribe
     {
@@ -199,19 +236,28 @@ const P3_FREE_FOR_TRIBE: Chip = {
 };
 
 // ---------------------------------------------------------------------------
-// Revenue Chips (R1–R2) — how collected fees are handled
+// Revenue Chips (R1) — how collected fees are handled
 // ---------------------------------------------------------------------------
 
 const R1_OWNER_COLLECT: Chip = {
   id: 'R1',
   category: 'revenue',
-  selectionMode: 'radio',
-  radioGroup: 'revenue_mode',
+  selectionMode: 'checkbox',
   label: 'Owner Collect',
   description: 'Transfer the payment directly to the gate owner.',
   defaultEnabled: true,
+  configFields: [
+    {
+      key: 'ownerAddress',
+      label: 'Owner address',
+      type: 'string' as const,
+      defaultValue: '',
+      placeholder: 'Leave blank to use deployer wallet',
+      phase: 'post-deploy',
+    },
+  ],
   codeSnippet: () => `
-    // [R1] Owner Collect
+    // [R1] Owner Collect — validate payment amount, handle change, transfer to owner
     if (required_price > 0) {
         assert!(coin::value(&payment) >= required_price, EInsufficientPayment);
         if (coin::value(&payment) > required_price) {
@@ -219,29 +265,6 @@ const R1_OWNER_COLLECT: Chip = {
             transfer::public_transfer(change, ctx.sender());
         };
         transfer::public_transfer(payment, toll_cfg.owner_address);
-    } else {
-        transfer::public_transfer(payment, ctx.sender());
-    };`,
-};
-
-const R2_POOL_ACCUMULATE: Chip = {
-  id: 'R2',
-  category: 'revenue',
-  selectionMode: 'radio',
-  radioGroup: 'revenue_mode',
-  label: 'Pool Accumulate',
-  description: 'Accumulate fees in a contract balance pool (owner can withdraw later).',
-  defaultEnabled: false,
-  codeSnippet: () => `
-    // [R2] Pool Accumulate
-    if (required_price > 0) {
-        assert!(coin::value(&payment) >= required_price, EInsufficientPayment);
-        if (coin::value(&payment) > required_price) {
-            let change = payment.split(coin::value(&payment) - required_price, ctx);
-            transfer::public_transfer(change, ctx.sender());
-        };
-        let toll_cfg_mut = extension_config.borrow_rule_mut<TollConfigKey, TollConfig>(admin_cap_placeholder, TollConfigKey {});
-        balance::join(&mut toll_cfg_mut.pool, coin::into_balance(payment));
     } else {
         transfer::public_transfer(payment, ctx.sender());
     };`,
@@ -259,6 +282,15 @@ const I1_SINGLE_ITEM: Chip = {
   label: 'Single Item Type',
   description: 'Accept only one specific item type as bounty.',
   defaultEnabled: true,
+  configFields: [
+    {
+      key: 'bountyTypeId',
+      label: 'Required Item Type ID',
+      type: 'number' as const,
+      defaultValue: 1001,
+      phase: 'post-deploy',
+    },
+  ],
   codeSnippet: () => `
     // [I1] Single Item Type
     assert!(extension_config.has_rule<BountyConfigKey>(BountyConfigKey {}), ENoBountyConfig);
@@ -281,11 +313,15 @@ const I2_MULTI_ITEM: Chip = {
       type: 'string' as const,
       defaultValue: '1001,1002,1003',
       placeholder: 'e.g. 1001,1002,1003',
+      phase: 'compile',
     },
   ],
-  codeSnippet: (params) => {
+  codeSnippet: params => {
     const raw = String(params?.acceptedTypes ?? '1001,1002,1003');
-    const ids = raw.split(',').map(s => s.trim()).filter(Boolean);
+    const ids = raw
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
     return `
     // [I2] Multi-Item Accept
     {
@@ -315,9 +351,10 @@ const I3_MIN_QUANTITY: Chip = {
       label: 'Minimum quantity',
       type: 'number' as const,
       defaultValue: 5,
+      phase: 'compile',
     },
   ],
-  codeSnippet: (params) => {
+  codeSnippet: params => {
     const qty = Number(params?.minQuantity ?? 5);
     return `
     // [I3] Minimum Quantity
@@ -334,9 +371,19 @@ const C1_FIXED_EXPIRY: Chip = {
   category: 'config',
   selectionMode: 'checkbox',
   label: 'Fixed Expiry',
-  description: 'Issue permits with a fixed expiry duration.',
+  description: 'Permit expiry duration (milliseconds). Default: 1 hour.',
   defaultEnabled: true,
-  codeSnippet: () => '',  // Expiry logic is baked into the skeleton, C1 is always present
+  configFields: [
+    {
+      key: 'expiryDurationMs',
+      label: 'Permit expiry (ms)',
+      type: 'number' as const,
+      defaultValue: 3_600_000,
+      placeholder: '3600000 = 1 hour',
+      phase: 'post-deploy',
+    },
+  ],
+  codeSnippet: () => '', // Value is consumed by the code generator, not injected as a snippet
 };
 
 // ---------------------------------------------------------------------------
@@ -351,7 +398,6 @@ export const GATE_CHIPS: Chip[] = [
   P2_TRIBE_DISCOUNT,
   P3_FREE_FOR_TRIBE,
   R1_OWNER_COLLECT,
-  R2_POOL_ACCUMULATE,
   I1_SINGLE_ITEM,
   I2_MULTI_ITEM,
   I3_MIN_QUANTITY,
@@ -362,10 +408,10 @@ export const GATE_CHIPS: Chip[] = [
 export function chipsForTemplate(templateTag: string): Chip[] {
   const chipSets: Record<string, string[]> = {
     tribe_permit: ['A1', 'A2', 'A3', 'C1'],
-    toll_gate:    ['P1', 'P2', 'P3', 'R1', 'R2', 'C1'],
-    bounty_gate:  ['I1', 'I2', 'I3', 'C1'],
-    open_permit:  ['C1'],
-    multi_rule:   ['A1', 'A2', 'A3', 'P1', 'P2', 'P3', 'R1', 'R2', 'C1'],
+    toll_gate: ['P1', 'P2', 'P3', 'R1', 'C1'],
+    bounty_gate: ['I1', 'I2', 'I3', 'C1'],
+    open_permit: ['C1'],
+    multi_rule: ['A1', 'A2', 'A3', 'P1', 'P2', 'P3', 'R1', 'C1'],
   };
   const allowed = new Set(chipSets[templateTag] ?? []);
   return GATE_CHIPS.filter(c => allowed.has(c.id));

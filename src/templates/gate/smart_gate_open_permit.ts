@@ -5,10 +5,10 @@
  * Useful for logging gate usage or as a placeholder extension.
  */
 
-import type { AssemblyTemplate } from '../types';
 import type { ChipSelection } from '../chip-types';
-import { generateGateFiles } from './gate_code_generator';
+import type { AssemblyTemplate } from '../types';
 import { chipsForTemplate } from './chips';
+import { generateGateFiles } from './gate_code_generator';
 import { OPEN_PERMIT_PRESETS } from './presets';
 
 function defaultSelection(): ChipSelection {
@@ -23,14 +23,30 @@ function parseConfig(raw?: Record<string, unknown>): {
   selection: ChipSelection;
 } {
   if (!raw) {
-    return { moduleName: 'smart_gate_extension', selection: defaultSelection() };
+    return {
+      moduleName: 'smart_gate_extension',
+      selection: defaultSelection(),
+    };
   }
 
-  const moduleName = typeof raw.moduleName === 'string' && raw.moduleName
-    ? raw.moduleName
-    : 'smart_gate_extension';
+  const moduleName =
+    typeof raw.moduleName === 'string' && raw.moduleName
+      ? raw.moduleName
+      : 'smart_gate_extension';
 
-  return { moduleName, selection: defaultSelection() };
+  const chipConfigs = (
+    raw.chipConfigs && typeof raw.chipConfigs === 'object'
+      ? raw.chipConfigs
+      : {}
+  ) as Record<string, Record<string, unknown>>;
+
+  return {
+    moduleName,
+    selection: {
+      enabledChips: ['C1'],
+      chipConfigs,
+    },
+  };
 }
 
 export const gateOpenPermit: AssemblyTemplate = {
@@ -45,14 +61,16 @@ export const gateOpenPermit: AssemblyTemplate = {
   chipConfig: {
     chips: chipsForTemplate('open_permit'),
     presets: OPEN_PERMIT_PRESETS,
-    categories: [
-      { key: 'config', label: 'Configuration', icon: '⚙️' },
-    ],
+    categories: [{ key: 'config', label: 'Configuration', icon: '⚙️' }],
     defaultModuleName: 'smart_gate_extension',
   },
 
   files: (rawConfig?: Record<string, unknown>) => {
     const { moduleName, selection } = parseConfig(rawConfig);
-    return generateGateFiles({ templateTag: 'open_permit', moduleName, selection });
+    return generateGateFiles({
+      templateTag: 'open_permit',
+      moduleName,
+      selection,
+    });
   },
 };

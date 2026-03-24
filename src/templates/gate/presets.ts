@@ -57,10 +57,10 @@ export const TOLL_GATE_PRESETS: Preset[] = [
     chipConfigs: { P3: { freeTribes: '100' } },
   },
   {
-    id: 'treasury_toll',
-    label: 'Treasury Toll',
-    description: 'Fees accumulate in a contract pool for DAO-style withdrawal.',
-    chips: ['P1', 'R2', 'C1'],
+    id: 'toll_with_change',
+    label: 'Toll + Change',
+    description: 'Fixed price with automatic change returned to the traveler.',
+    chips: ['P1', 'R1', 'C1'],
   },
 ];
 
