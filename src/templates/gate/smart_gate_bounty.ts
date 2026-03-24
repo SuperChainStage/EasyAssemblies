@@ -1,18 +1,17 @@
 /**
- * Gate Template A: Tribe Permit — AssemblyTemplate registration.
+ * Gate Template C: Bounty Gate — AssemblyTemplate registration.
  *
- * Restricts gate access to members of a specific tribe (or tribe whitelist/blacklist).
- * Refactored in Phase 7 to use the chip system via gate_code_generator.
+ * Travelers must submit items (e.g. corpse bounties) to receive a jump permit.
  */
 
 import type { AssemblyTemplate } from '../types';
 import type { ChipSelection } from '../chip-types';
 import { generateGateFiles } from './gate_code_generator';
 import { chipsForTemplate } from './chips';
-import { TRIBE_PERMIT_PRESETS } from './presets';
+import { BOUNTY_GATE_PRESETS } from './presets';
 
 function defaultSelection(): ChipSelection {
-  const preset = TRIBE_PERMIT_PRESETS[0];
+  const preset = BOUNTY_GATE_PRESETS[0];
   return {
     enabledChips: [...preset.chips],
     chipConfigs: preset.chipConfigs ? structuredClone(preset.chipConfigs) : {},
@@ -44,20 +43,20 @@ function parseConfig(raw?: Record<string, unknown>): {
   return { moduleName, selection: { enabledChips, chipConfigs } };
 }
 
-export const gateTribePermit: AssemblyTemplate = {
-  id: 'gate_tribe_permit',
-  label: 'Tribe Permit Gate',
+export const gateBounty: AssemblyTemplate = {
+  id: 'gate_bounty',
+  label: 'Bounty Gate',
   assemblyType: 'gate',
-  description: 'Only characters from a configured tribe can jump through.',
+  description: 'Submit items to earn passage; supports multi-item and bulk bounties.',
   detail:
-    'Deploy a gate extension that checks the traveler\'s tribe before issuing ' +
-    'a jump permit. Choose single-tribe, multi-tribe whitelist, or blacklist mode.',
+    'Deploy a gate extension where travelers deposit items into the gate owner\'s ' +
+    'storage unit in exchange for a jump permit. Configure accepted item types and quantities.',
 
   chipConfig: {
-    chips: chipsForTemplate('tribe_permit'),
-    presets: TRIBE_PERMIT_PRESETS,
+    chips: chipsForTemplate('bounty_gate'),
+    presets: BOUNTY_GATE_PRESETS,
     categories: [
-      { key: 'access', label: 'Access Control', icon: '🔐' },
+      { key: 'item', label: 'Item Validation', icon: '📦' },
       { key: 'config', label: 'Configuration', icon: '⚙️' },
     ],
     defaultModuleName: 'smart_gate_extension',
@@ -65,6 +64,6 @@ export const gateTribePermit: AssemblyTemplate = {
 
   files: (rawConfig?: Record<string, unknown>) => {
     const { moduleName, selection } = parseConfig(rawConfig);
-    return generateGateFiles({ templateTag: 'tribe_permit', moduleName, selection });
+    return generateGateFiles({ templateTag: 'bounty_gate', moduleName, selection });
   },
 };

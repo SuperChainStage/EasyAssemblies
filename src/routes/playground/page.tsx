@@ -403,7 +403,9 @@ function ChipSummary({
     weight: '#60a5fa',
     access: '#34d399',
     payment: '#fbbf24',
-    config: '#8b949e',
+    revenue: '#c084fc',
+    item: '#fb923c',
+    config: '#94a3b8',
   };
 
   return (

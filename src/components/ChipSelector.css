@@ -188,6 +188,11 @@
 }
 .chip-category-label.exclude { color: #f87171; }
 .chip-category-label.weight  { color: #60a5fa; }
+.chip-category-label.access  { color: #34d399; }
+.chip-category-label.payment { color: #fbbf24; }
+.chip-category-label.revenue { color: #c084fc; }
+.chip-category-label.item    { color: #fb923c; }
+.chip-category-label.config  { color: #94a3b8; }
 .chip-category-count {
   font-size: 10px;
   color: #6b7280;
@@ -228,14 +233,39 @@
   animation: chip-insert 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .chip-card.enabled.exclude {
-  border-color: rgba(248, 113, 113, 0.3);
-  background: rgba(248, 113, 113, 0.04);
-  box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.06), inset 0 1px 0 rgba(248, 113, 113, 0.06);
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.08);
+  box-shadow: 0 0 12px rgba(248, 113, 113, 0.1), inset 0 1px 0 rgba(248, 113, 113, 0.08);
 }
 .chip-card.enabled.weight {
-  border-color: rgba(96, 165, 250, 0.3);
-  background: rgba(96, 165, 250, 0.04);
-  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.06), inset 0 1px 0 rgba(96, 165, 250, 0.06);
+  border-color: rgba(96, 165, 250, 0.4);
+  background: rgba(96, 165, 250, 0.08);
+  box-shadow: 0 0 12px rgba(96, 165, 250, 0.1), inset 0 1px 0 rgba(96, 165, 250, 0.08);
+}
+.chip-card.enabled.access {
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(52, 211, 153, 0.08);
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.1), inset 0 1px 0 rgba(52, 211, 153, 0.08);
+}
+.chip-card.enabled.payment {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.08);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.1), inset 0 1px 0 rgba(251, 191, 36, 0.08);
+}
+.chip-card.enabled.revenue {
+  border-color: rgba(192, 132, 252, 0.4);
+  background: rgba(192, 132, 252, 0.08);
+  box-shadow: 0 0 12px rgba(192, 132, 252, 0.1), inset 0 1px 0 rgba(192, 132, 252, 0.08);
+}
+.chip-card.enabled.item {
+  border-color: rgba(251, 146, 60, 0.4);
+  background: rgba(251, 146, 60, 0.08);
+  box-shadow: 0 0 12px rgba(251, 146, 60, 0.1), inset 0 1px 0 rgba(251, 146, 60, 0.08);
+}
+.chip-card.enabled.config {
+  border-color: rgba(148, 163, 184, 0.4);
+  background: rgba(148, 163, 184, 0.06);
+  box-shadow: 0 0 12px rgba(148, 163, 184, 0.08), inset 0 1px 0 rgba(148, 163, 184, 0.06);
 }
 .chip-card.conflict {
   opacity: 0.4;
@@ -270,12 +300,13 @@
 .chip-card.enabled .chip-card-toggle {
   border-color: transparent;
 }
-.chip-card.enabled.exclude .chip-card-toggle {
-  background: #f87171;
-}
-.chip-card.enabled.weight .chip-card-toggle {
-  background: #60a5fa;
-}
+.chip-card.enabled.exclude .chip-card-toggle { background: #f87171; }
+.chip-card.enabled.weight  .chip-card-toggle { background: #60a5fa; }
+.chip-card.enabled.access  .chip-card-toggle { background: #34d399; }
+.chip-card.enabled.payment .chip-card-toggle { background: #fbbf24; }
+.chip-card.enabled.revenue .chip-card-toggle { background: #c084fc; }
+.chip-card.enabled.item    .chip-card-toggle { background: #fb923c; }
+.chip-card.enabled.config  .chip-card-toggle { background: #94a3b8; }
 .chip-card-toggle-check {
   font-size: 10px;
   color: #0d1117;
@@ -303,14 +334,13 @@
   border-radius: 3px;
   line-height: 1;
 }
-.chip-card-id.exclude {
-  color: #fca5a5;
-  background: rgba(248, 113, 113, 0.12);
-}
-.chip-card-id.weight {
-  color: #93c5fd;
-  background: rgba(96, 165, 250, 0.12);
-}
+.chip-card-id.exclude { color: #fca5a5; background: rgba(248, 113, 113, 0.15); }
+.chip-card-id.weight  { color: #93c5fd; background: rgba(96, 165, 250, 0.15); }
+.chip-card-id.access  { color: #6ee7b7; background: rgba(52, 211, 153, 0.15); }
+.chip-card-id.payment { color: #fde68a; background: rgba(251, 191, 36, 0.15); }
+.chip-card-id.revenue { color: #d8b4fe; background: rgba(192, 132, 252, 0.15); }
+.chip-card-id.item    { color: #fdba74; background: rgba(251, 146, 60, 0.15); }
+.chip-card-id.config  { color: #cbd5e1; background: rgba(148, 163, 184, 0.15); }
 .chip-card-label {
   font-size: 12px;
   font-weight: 500;

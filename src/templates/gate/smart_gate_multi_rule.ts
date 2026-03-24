@@ -1,18 +1,18 @@
 /**
- * Gate Template A: Tribe Permit — AssemblyTemplate registration.
+ * Gate Template E: Multi-Rule Gate — AssemblyTemplate registration.
  *
- * Restricts gate access to members of a specific tribe (or tribe whitelist/blacklist).
- * Refactored in Phase 7 to use the chip system via gate_code_generator.
+ * Combines access control (tribe checks) with payment rules in one gate.
+ * The most flexible Gate template.
  */
 
 import type { AssemblyTemplate } from '../types';
 import type { ChipSelection } from '../chip-types';
 import { generateGateFiles } from './gate_code_generator';
 import { chipsForTemplate } from './chips';
-import { TRIBE_PERMIT_PRESETS } from './presets';
+import { MULTI_RULE_PRESETS } from './presets';
 
 function defaultSelection(): ChipSelection {
-  const preset = TRIBE_PERMIT_PRESETS[0];
+  const preset = MULTI_RULE_PRESETS[0];
   return {
     enabledChips: [...preset.chips],
     chipConfigs: preset.chipConfigs ? structuredClone(preset.chipConfigs) : {},
@@ -44,20 +44,22 @@ function parseConfig(raw?: Record<string, unknown>): {
   return { moduleName, selection: { enabledChips, chipConfigs } };
 }
 
-export const gateTribePermit: AssemblyTemplate = {
-  id: 'gate_tribe_permit',
-  label: 'Tribe Permit Gate',
+export const gateMultiRule: AssemblyTemplate = {
+  id: 'gate_multi_rule',
+  label: 'Multi-Rule Gate',
   assemblyType: 'gate',
-  description: 'Only characters from a configured tribe can jump through.',
+  description: 'Combine tribe access control with payment rules in one gate.',
   detail:
-    'Deploy a gate extension that checks the traveler\'s tribe before issuing ' +
-    'a jump permit. Choose single-tribe, multi-tribe whitelist, or blacklist mode.',
+    'Deploy an advanced gate extension that chains access checks (tribe whitelist/blacklist) ' +
+    'with payment rules (toll, discounts, free passage). The most flexible Gate template.',
 
   chipConfig: {
-    chips: chipsForTemplate('tribe_permit'),
-    presets: TRIBE_PERMIT_PRESETS,
+    chips: chipsForTemplate('multi_rule'),
+    presets: MULTI_RULE_PRESETS,
     categories: [
       { key: 'access', label: 'Access Control', icon: '🔐' },
+      { key: 'payment', label: 'Payment Rules', icon: '💰' },
+      { key: 'revenue', label: 'Revenue Handling', icon: '🏦' },
       { key: 'config', label: 'Configuration', icon: '⚙️' },
     ],
     defaultModuleName: 'smart_gate_extension',
@@ -65,6 +67,6 @@ export const gateTribePermit: AssemblyTemplate = {
 
   files: (rawConfig?: Record<string, unknown>) => {
     const { moduleName, selection } = parseConfig(rawConfig);
-    return generateGateFiles({ templateTag: 'tribe_permit', moduleName, selection });
+    return generateGateFiles({ templateTag: 'multi_rule', moduleName, selection });
   },
 };

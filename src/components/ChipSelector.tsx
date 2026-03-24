@@ -83,8 +83,14 @@ export function ChipSelector({
     return set;
   }, [enabled, chipById]);
 
-  const enabledExclude = enabled.filter(id => chipById.get(id)?.category === 'exclude').length;
-  const enabledWeight = enabled.filter(id => chipById.get(id)?.category === 'weight').length;
+  const enabledByCategory = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const id of enabled) {
+      const cat = chipById.get(id)?.category;
+      if (cat) counts[cat] = (counts[cat] ?? 0) + 1;
+    }
+    return counts;
+  }, [enabled, chipById]);
 
   // ── Handlers ──
   const toggleChip = useCallback((id: string) => {
@@ -291,9 +297,14 @@ export function ChipSelector({
         {/* Footer */}
         <div className="chip-footer">
           <div className="chip-footer-summary">
-            <span>{enabledExclude}</span> exclude
-            {' + '}
-            <span>{enabledWeight}</span> weight
+            {categories
+              .filter(cat => (enabledByCategory[cat.key] ?? 0) > 0)
+              .map((cat, i) => (
+                <span key={cat.key}>
+                  {i > 0 && ' + '}
+                  <span>{enabledByCategory[cat.key]}</span> {cat.label.toLowerCase()}
+                </span>
+              ))}
             {' = '}
             <span>{enabled.length}</span> chips
           </div>
