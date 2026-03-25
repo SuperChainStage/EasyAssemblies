@@ -6,6 +6,11 @@ import { gateOpenPermit } from './gate/smart_gate_open_permit';
 import { gateMultiRule } from './gate/smart_gate_multi_rule';
 import { turretTargeting } from './turret/turret_targeting';
 import { helloWorldTest } from './test/hello_world';
+import { ssuOpenStorage } from './storage-unit/ssu_open_storage';
+import { ssuGatedLocker } from './storage-unit/ssu_gated_locker';
+import { ssuVendingMachine } from './storage-unit/ssu_vending_machine';
+import { ssuItemSwap } from './storage-unit/ssu_item_swap';
+import { ssuAirdropHub } from './storage-unit/ssu_airdrop_hub';
 
 // --- Template Groups by Assembly Type ---
 export const GATE_TEMPLATES: AssemblyTemplate[] = [
@@ -15,7 +20,13 @@ export const GATE_TEMPLATES: AssemblyTemplate[] = [
   gateOpenPermit,
   gateMultiRule,
 ];
-export const SSU_TEMPLATES: AssemblyTemplate[] = [];     // Phase 8 fill-in
+export const SSU_TEMPLATES: AssemblyTemplate[] = [
+  ssuVendingMachine,
+  ssuItemSwap,
+  ssuGatedLocker,
+  ssuAirdropHub,
+  ssuOpenStorage,
+];
 export const TURRET_TEMPLATES: AssemblyTemplate[] = [turretTargeting];
 export const TEST_TEMPLATES: AssemblyTemplate[] = [helloWorldTest];
 
