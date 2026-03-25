@@ -406,6 +406,10 @@ function ChipSummary({
     revenue: '#c084fc',
     item: '#fb923c',
     config: '#94a3b8',
+    pricing: '#2dd4bf',
+    stock: '#38bdf8',
+    swap: '#f472b6',
+    airdrop: '#a3e635',
   };
 
   return (

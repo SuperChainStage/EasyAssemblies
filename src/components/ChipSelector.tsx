@@ -58,6 +58,7 @@ export function ChipSelector({
     presets[0]?.chipConfigs ? structuredClone(presets[0].chipConfigs) : {},
   );
   const [conflictFlash, setConflictFlash] = useState<string[]>([]);
+  const [configErrors, setConfigErrors] = useState<Record<string, Record<string, string>>>({});
 
   // ── Derived ──
   const activePreset = useMemo(() =>
@@ -139,16 +140,42 @@ export function ChipSelector({
   const handleSubmit = useCallback(() => {
     const err = validateModuleName(moduleName);
     if (err) { setModuleError(err); return; }
+
+    // Validate compile-time config fields
+    const nextConfigErrors: Record<string, Record<string, string>> = {};
+    let hasConfigError = false;
+    for (const chipId of enabled) {
+      const chip = chipById.get(chipId);
+      if (!chip?.configFields) continue;
+      const compileFields = chip.configFields.filter(
+        (f: ChipConfigField) => f.phase === 'compile' || !f.phase,
+      );
+      if (compileFields.length === 0) continue;
+      const cfg = chipConfigs[chipId] ?? {};
+      for (const f of compileFields) {
+        const val = cfg[f.key] ?? f.defaultValue;
+        const strVal = String(val ?? '').trim();
+        if (!strVal) {
+          if (!nextConfigErrors[chipId]) nextConfigErrors[chipId] = {};
+          nextConfigErrors[chipId][f.key] = 'Required';
+          hasConfigError = true;
+        }
+      }
+    }
+    setConfigErrors(nextConfigErrors);
+    if (hasConfigError) return;
+
     onSubmit({
       moduleName,
       selection: { enabledChips: enabled, chipConfigs },
     });
-  }, [moduleName, enabled, chipConfigs, onSubmit, validateModuleName]);
+  }, [moduleName, enabled, chipConfigs, chipById, onSubmit, validateModuleName]);
 
   // ── Render helpers ──
   const renderChipConfig = (chip: Chip) => {
     if (!chip.configFields || !enabled.includes(chip.id)) return null;
     const cfg = chipConfigs[chip.id] ?? {};
+    const errs = configErrors[chip.id] ?? {};
     return (
       <div className={`chip-config-panel ${enabled.includes(chip.id) ? 'open' : ''}`}>
         {chip.configFields.map((f: ChipConfigField) => (
@@ -169,7 +196,7 @@ export function ChipSelector({
               </select>
             ) : (
               <input
-                className="chip-config-field-input"
+                className={`chip-config-field-input ${errs[f.key] ? 'has-error' : ''}`}
                 type={f.type === 'number' ? 'number' : 'text'}
                 value={String(cfg[f.key] ?? f.defaultValue)}
                 placeholder={f.placeholder}
@@ -177,9 +204,20 @@ export function ChipSelector({
                 onChange={e => {
                   const val = f.type === 'number' ? Number(e.target.value) : e.target.value;
                   updateChipConfig(chip.id, f.key, val);
+                  if (errs[f.key]) {
+                    setConfigErrors(prev => {
+                      const next = { ...prev };
+                      if (next[chip.id]) {
+                        const { [f.key]: _, ...rest } = next[chip.id];
+                        next[chip.id] = rest;
+                      }
+                      return next;
+                    });
+                  }
                 }}
               />
             )}
+            {errs[f.key] && <span className="chip-config-field-error">⚠ {errs[f.key]}</span>}
           </div>
         ))}
       </div>
