@@ -1,0 +1,137 @@
+/* ── AuthorizePanel ── */
+.authorize-panel {
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #161b22;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.authorize-header {
+  padding: 10px 14px;
+  background: #1c2333;
+  border-bottom: 1px solid #30363d;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.authorize-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.authorize-desc {
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.authorize-form {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.authorize-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.authorize-label {
+  font-size: 11px;
+  color: #8b949e;
+  font-weight: 500;
+}
+
+.authorize-input {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #e6edf3;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.authorize-input:focus {
+  border-color: #58a6ff;
+}
+
+.authorize-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.authorize-submit-btn {
+  margin-top: 4px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.authorize-submit-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.authorize-submit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.authorize-error {
+  padding: 6px 10px;
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  border-radius: 4px;
+  font-size: 11px;
+  color: #f85149;
+  word-break: break-all;
+}
+
+.authorize-success {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #3fb950;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.authorize-link {
+  color: #58a6ff;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.authorize-link:hover {
+  text-decoration: underline;
+}
+
+.authorize-reset-btn {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #8b949e;
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.authorize-reset-btn:hover {
+  border-color: #58a6ff;
+  color: #e6edf3;
+}

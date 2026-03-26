@@ -1,4 +1,5 @@
 import { ActionBar } from '@/components/ActionBar';
+import { AuthorizePanel } from '@/components/AuthorizePanel';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Console } from '@/components/Console';
 import { FileTree, buildFileTree } from '@/components/FileTree';
@@ -266,6 +267,14 @@ export default function PlaygroundPage() {
             onRefreshPostDeployConfig={onRefreshPostDeployConfig}
             explorerBaseUrl={explorerBaseUrl}
           />
+
+          {packageId && template && (
+            <AuthorizePanel
+              componentType={template.assemblyType}
+              extensionPackageId={packageId}
+              explorerBaseUrl={explorerBaseUrl}
+            />
+          )}
 
           <ActionBar
             showLogs={showLogs}

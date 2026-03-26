@@ -89,6 +89,51 @@ type GatePostDeployPlan = {
   rules: GatePostDeployRule[];
 };
 
+// ---------------------------------------------------------------------------
+// SSU post-deploy rule types
+// ---------------------------------------------------------------------------
+
+type SSUPostDeployRule =
+  | {
+      kind: 'vending_s1';
+      moveModule: string;
+      pricePerUnit: number;
+      ownerAddress?: string;
+    }
+  | {
+      kind: 'vending_s2';
+      moveModule: string;
+      ownerAddress?: string;
+    }
+  | {
+      kind: 'swap';
+      moveModule: string;
+      inputTypeId: number;
+      outputTypeId: number;
+      ratioNum: number;
+      ratioDen: number;
+    }
+  | {
+      kind: 'airdrop';
+      moveModule: string;
+      itemTypeId: number;
+      quantity: number;
+    };
+
+type SSUPostDeployPlan = {
+  templateId: string;
+  rules: SSUPostDeployRule[];
+};
+
+// ---------------------------------------------------------------------------
+// Unified post-deploy plan wrapper
+// ---------------------------------------------------------------------------
+
+type PostDeployPlan =
+  | { component: 'gate'; gate: GatePostDeployPlan }
+  | { component: 'storage_unit'; ssu: SSUPostDeployPlan }
+  | { component: 'turret'; templateId: string };
+
 export type PostDeployConfigStatus =
   | 'idle'
   | 'ready'
@@ -98,7 +143,7 @@ export type PostDeployConfigStatus =
   | 'verifying'
   | 'verified';
 
-export type VerifiedGateConfig = {
+export type VerifiedConfig = {
   rows: Array<{
     label: string;
     value: string;
@@ -113,8 +158,8 @@ export type PostDeployConfigState = {
   adminCapId?: string;
   configTxDigest?: string;
   error?: string;
-  requestedPlan?: GatePostDeployPlan;
-  verification?: VerifiedGateConfig;
+  requestedPlan?: PostDeployPlan;
+  verification?: VerifiedConfig;
 };
 
 const DEFAULT_TRIBE_ID = 100;
@@ -703,6 +748,121 @@ function resolveGateDeployPlan(
   }
 }
 
+// ---------------------------------------------------------------------------
+// SSU deploy plan resolver
+// ---------------------------------------------------------------------------
+
+function resolveSSUDeployPlan(
+  templateId: string | null | undefined,
+  rawConfig?: Record<string, unknown>,
+): SSUPostDeployPlan | null {
+  if (
+    templateId !== 'ssu_vending_machine' &&
+    templateId !== 'ssu_item_swap' &&
+    templateId !== 'ssu_airdrop_hub' &&
+    templateId !== 'ssu_gated_locker' &&
+    templateId !== 'ssu_open_storage'
+  ) {
+    return null;
+  }
+
+  // No post-deploy rules for these templates
+  if (templateId === 'ssu_gated_locker' || templateId === 'ssu_open_storage') {
+    return null;
+  }
+
+  const enabledChips = resolveEnabledChips(templateId, rawConfig);
+  const chipConfigs = resolveChipConfigs(rawConfig);
+
+  const rules: SSUPostDeployRule[] = [];
+
+  switch (templateId) {
+    case 'ssu_vending_machine': {
+      const pricePerUnit = readNumericConfig(
+        rawConfig, chipConfigs, 'V1', 'pricePerUnit', DEFAULT_PRICE_MIST, true,
+      );
+      const ownerAddress = readStringConfig(
+        rawConfig, chipConfigs, 'R1', 'ownerAddress',
+      );
+      if (enabledChips.has('S2')) {
+        rules.push({ kind: 'vending_s2', moveModule: 'vending', ownerAddress });
+      } else {
+        rules.push({ kind: 'vending_s1', moveModule: 'vending', pricePerUnit, ownerAddress });
+      }
+      break;
+    }
+    case 'ssu_item_swap': {
+      const inputTypeId = readNumericConfig(
+        rawConfig, chipConfigs, 'W1', 'inputTypeId', 1001, true,
+      );
+      const outputTypeId = readNumericConfig(
+        rawConfig, chipConfigs, 'W1', 'outputTypeId', 1002, true,
+      );
+      const ratioNum = readNumericConfig(
+        rawConfig, chipConfigs, 'W1', 'ratioNum', 1,
+      );
+      const ratioDen = readNumericConfig(
+        rawConfig, chipConfigs, 'W1', 'ratioDen', 1,
+      );
+      rules.push({
+        kind: 'swap',
+        moveModule: 'swap',
+        inputTypeId,
+        outputTypeId,
+        ratioNum,
+        ratioDen,
+      });
+      break;
+    }
+    case 'ssu_airdrop_hub': {
+      const itemTypeId = readNumericConfig(
+        rawConfig, chipConfigs, 'D1', 'itemTypeId', 1001, true,
+      );
+      const quantity = readNumericConfig(
+        rawConfig, chipConfigs, 'D1', 'quantity', 1,
+      );
+      rules.push({
+        kind: 'airdrop',
+        moveModule: 'airdrop',
+        itemTypeId,
+        quantity,
+      });
+      break;
+    }
+  }
+
+  return rules.length > 0 ? { templateId, rules } : null;
+}
+
+// ---------------------------------------------------------------------------
+// Unified deploy plan resolver
+// ---------------------------------------------------------------------------
+
+function resolveDeployPlan(
+  templateId: string | null | undefined,
+  rawConfig?: Record<string, unknown>,
+): PostDeployPlan | null {
+  // Gate templates
+  const gatePlan = resolveGateDeployPlan(templateId, rawConfig);
+  if (gatePlan) return { component: 'gate', gate: gatePlan };
+
+  // SSU templates
+  const ssuPlan = resolveSSUDeployPlan(templateId, rawConfig);
+  if (ssuPlan) return { component: 'storage_unit', ssu: ssuPlan };
+
+  // Turret templates
+  if (templateId?.startsWith('turret_')) {
+    return { component: 'turret', templateId };
+  }
+
+  // SSU templates with no rules (gated locker, open storage)
+  if (templateId?.startsWith('ssu_')) {
+    return null;
+  }
+
+  return null;
+}
+
 function findChangedObjectIdByType(
   objectChanges: SuiObjectChange[],
   objectType: string,
@@ -792,7 +952,7 @@ export function useMoveBuilder(
     walletChain,
     worldPackageReference,
   } = useNetworkVariables();
-  const gateDeployPlan = resolveGateDeployPlan(
+  const deployPlan = resolveDeployPlan(
     options?.templateId,
     options?.config,
   );
@@ -983,7 +1143,7 @@ export function useMoveBuilder(
       extensionConfigId: string;
       requestedPlan: GatePostDeployPlan;
       preserveStatusOnFailure?: PostDeployConfigStatus;
-    }): Promise<VerifiedGateConfig | null> => {
+    }): Promise<VerifiedConfig | null> => {
       setPostDeployConfig(prev => ({
         ...prev,
         status: 'verifying',
@@ -1023,7 +1183,7 @@ export function useMoveBuilder(
 
           return extractMoveStructFields(dynamicField.value);
         };
-        const rows: VerifiedGateConfig['rows'] = [];
+        const rows: VerifiedConfig['rows'] = [];
 
         for (const rule of input.requestedPlan.rules) {
           switch (rule.kind) {
@@ -1089,7 +1249,7 @@ export function useMoveBuilder(
           }
         }
 
-        const verification: VerifiedGateConfig = {
+        const verification: VerifiedConfig = {
           rows,
           verifiedAt: new Date().toISOString(),
         };
@@ -1136,7 +1296,7 @@ export function useMoveBuilder(
         packageId: input.packageId,
         extensionConfigId: input.extensionConfigId,
         adminCapId: input.adminCapId,
-        requestedPlan: input.requestedPlan,
+        requestedPlan: { component: 'gate', gate: input.requestedPlan },
         verification: undefined,
         error: undefined,
       }));
@@ -1267,7 +1427,7 @@ export function useMoveBuilder(
           packageId: input.packageId,
           extensionConfigId: input.extensionConfigId,
           adminCapId: input.adminCapId,
-          requestedPlan: input.requestedPlan,
+          requestedPlan: { component: 'gate', gate: input.requestedPlan },
           error: message,
         }));
         addLog(`⚠️ Post-deploy config failed: ${message}`);
@@ -1286,6 +1446,262 @@ export function useMoveBuilder(
     ],
   );
 
+  // ── SSU post-deploy: verify ──
+  const verifySSUPostDeployConfig = useCallback(
+    async (input: {
+      packageId: string;
+      extensionConfigId: string;
+      requestedPlan: SSUPostDeployPlan;
+      preserveStatusOnFailure?: PostDeployConfigStatus;
+    }): Promise<VerifiedConfig | null> => {
+      setPostDeployConfig(prev => ({
+        ...prev,
+        status: 'verifying',
+        error: undefined,
+      }));
+      addLog('🔎 Reading back on-chain SSU config…');
+
+      try {
+        const dynamicFields = await suiClient.getDynamicFields({
+          parentId: input.extensionConfigId,
+        });
+        const objectIdByFieldType = new Map(
+          dynamicFields.data.map(field => [field.name.type, field.objectId]),
+        );
+
+        const readFieldValue = async (
+          fieldType: string,
+        ): Promise<Record<string, unknown> | null> => {
+          const fieldObjectId = objectIdByFieldType.get(fieldType);
+          if (!fieldObjectId) return null;
+          const response = await suiClient.getObject({
+            id: fieldObjectId,
+            options: { showContent: true },
+          });
+          const content = response.data?.content;
+          if (content?.dataType !== 'moveObject') return null;
+          const dynamicField = extractMoveStructFields(content.fields);
+          if (dynamicField === null) return null;
+          return extractMoveStructFields(dynamicField.value);
+        };
+
+        const rows: VerifiedConfig['rows'] = [];
+
+        for (const rule of input.requestedPlan.rules) {
+          switch (rule.kind) {
+            case 'vending_s1': {
+              const val = await readFieldValue(
+                `${input.packageId}::${rule.moveModule}::VendingConfigKey`,
+              );
+              rows.push({ label: 'Price/Unit', value: String(coerceNumber(val?.price_per_unit) ?? '-') });
+              rows.push({ label: 'Owner', value: typeof val?.owner_address === 'string' ? val.owner_address : '-' });
+              break;
+            }
+            case 'vending_s2': {
+              const val = await readFieldValue(
+                `${input.packageId}::${rule.moveModule}::VendingConfigKey`,
+              );
+              rows.push({ label: 'Owner', value: typeof val?.owner_address === 'string' ? val.owner_address : '-' });
+              break;
+            }
+            case 'swap': {
+              const keyType = `${input.packageId}::${rule.moveModule}::SwapRuleKey`;
+              const val = await readFieldValue(keyType);
+              rows.push({ label: 'Input Type', value: String(coerceNumber(val?.input_type_id) ?? '-') });
+              rows.push({ label: 'Output Type', value: String(coerceNumber(val?.output_type_id) ?? '-') });
+              rows.push({ label: 'Ratio', value: `${coerceNumber(val?.ratio_num) ?? '-'} / ${coerceNumber(val?.ratio_den) ?? '-'}` });
+              break;
+            }
+            case 'airdrop': {
+              const val = await readFieldValue(
+                `${input.packageId}::${rule.moveModule}::AirdropConfigKey`,
+              );
+              rows.push({ label: 'Item Type', value: String(coerceNumber(val?.item_type_id) ?? '-') });
+              rows.push({ label: 'Quantity', value: String(coerceNumber(val?.quantity) ?? '-') });
+              break;
+            }
+          }
+        }
+
+        const verification: VerifiedConfig = {
+          rows,
+          verifiedAt: new Date().toISOString(),
+        };
+
+        setPostDeployConfig(prev => ({
+          ...prev,
+          status: 'verified',
+          verification,
+          error: undefined,
+        }));
+        for (const row of verification.rows) {
+          addLog(`✅ Readback verified ${row.label}: ${row.value}`);
+        }
+        return verification;
+      } catch (error) {
+        const message = String(error);
+        setPostDeployConfig(prev => ({
+          ...prev,
+          status: input.preserveStatusOnFailure ?? 'applied',
+          error: message,
+        }));
+        addLog(`⚠️ Readback failed: ${message}`);
+        return null;
+      }
+    },
+    [addLog, suiClient],
+  );
+
+  // ── SSU post-deploy: apply ──
+  const applySSUPostDeployConfig = useCallback(
+    async (input: {
+      packageId: string;
+      extensionConfigId: string;
+      adminCapId: string;
+      requestedPlan: SSUPostDeployPlan;
+    }): Promise<void> => {
+      setPostDeployConfig(prev => ({
+        ...prev,
+        status: 'applying',
+        packageId: input.packageId,
+        extensionConfigId: input.extensionConfigId,
+        adminCapId: input.adminCapId,
+        requestedPlan: { component: 'storage_unit', ssu: input.requestedPlan },
+        verification: undefined,
+        error: undefined,
+      }));
+
+      addLog('⚙️ Applying post-deploy SSU config…');
+
+      const configTx = new Transaction();
+      const extensionConfigObject = configTx.object(input.extensionConfigId);
+      const adminCapObject = configTx.object(input.adminCapId);
+
+      for (const rule of input.requestedPlan.rules) {
+        switch (rule.kind) {
+          case 'vending_s1': {
+            const ownerAddress =
+              rule.ownerAddress && rule.ownerAddress.length > 0
+                ? rule.ownerAddress
+                : account?.address;
+            if (!ownerAddress) {
+              throw new Error('Missing owner address; connect a wallet.');
+            }
+            addLog(`  ${rule.moveModule}.set_vending_config: price=${rule.pricePerUnit}, owner=${ownerAddress}`);
+            configTx.moveCall({
+              target: `${input.packageId}::${rule.moveModule}::set_vending_config`,
+              arguments: [
+                extensionConfigObject,
+                adminCapObject,
+                configTx.pure.u64(rule.pricePerUnit),
+                configTx.pure.address(ownerAddress),
+              ],
+            });
+            break;
+          }
+          case 'vending_s2': {
+            const ownerAddress =
+              rule.ownerAddress && rule.ownerAddress.length > 0
+                ? rule.ownerAddress
+                : account?.address;
+            if (!ownerAddress) {
+              throw new Error('Missing owner address; connect a wallet.');
+            }
+            addLog(`  ${rule.moveModule}.set_vending_config: owner=${ownerAddress}`);
+            configTx.moveCall({
+              target: `${input.packageId}::${rule.moveModule}::set_vending_config`,
+              arguments: [
+                extensionConfigObject,
+                adminCapObject,
+                configTx.pure.address(ownerAddress),
+              ],
+            });
+            break;
+          }
+          case 'swap':
+            addLog(`  ${rule.moveModule}.set_swap_rule: in=${rule.inputTypeId}, out=${rule.outputTypeId}, ratio=${rule.ratioNum}/${rule.ratioDen}`);
+            configTx.moveCall({
+              target: `${input.packageId}::${rule.moveModule}::set_swap_rule`,
+              arguments: [
+                extensionConfigObject,
+                adminCapObject,
+                configTx.pure.u64(rule.inputTypeId),
+                configTx.pure.u64(rule.outputTypeId),
+                configTx.pure.u64(rule.ratioNum),
+                configTx.pure.u64(rule.ratioDen),
+              ],
+            });
+            break;
+          case 'airdrop':
+            addLog(`  ${rule.moveModule}.set_airdrop_config: type=${rule.itemTypeId}, qty=${rule.quantity}`);
+            configTx.moveCall({
+              target: `${input.packageId}::${rule.moveModule}::set_airdrop_config`,
+              arguments: [
+                extensionConfigObject,
+                adminCapObject,
+                configTx.pure.u64(rule.itemTypeId),
+                configTx.pure.u32(rule.quantity),
+              ],
+            });
+            break;
+        }
+      }
+
+      try {
+        const configRes = await signAndExecuteTransaction({
+          transaction: configTx,
+          chain: walletChain,
+        });
+
+        setPostDeployConfig(prev => ({
+          ...prev,
+          status: 'applied',
+          configTxDigest: configRes.digest,
+          error: undefined,
+        }));
+
+        if (configRes.digest) {
+          addLog(`📜 Config tx digest: ${configRes.digest}`);
+          await suiClient.waitForTransaction({
+            digest: configRes.digest,
+            options: { showEffects: true },
+          });
+        }
+        addLog(`✅ Post-deploy SSU config applied to ${input.extensionConfigId}`);
+
+        await verifySSUPostDeployConfig({
+          packageId: input.packageId,
+          extensionConfigId: input.extensionConfigId,
+          requestedPlan: input.requestedPlan,
+          preserveStatusOnFailure: 'applied',
+        });
+      } catch (error) {
+        const message = String(error);
+        setPostDeployConfig(prev => ({
+          ...prev,
+          status: 'failed',
+          packageId: input.packageId,
+          extensionConfigId: input.extensionConfigId,
+          adminCapId: input.adminCapId,
+          requestedPlan: { component: 'storage_unit', ssu: input.requestedPlan },
+          error: message,
+        }));
+        addLog(`⚠️ SSU post-deploy config failed: ${message}`);
+        addLog(
+          `⚠️ You can retry later with AdminCap ${input.adminCapId} and ExtensionConfig ${input.extensionConfigId}`,
+        );
+      }
+    },
+    [
+      account,
+      addLog,
+      signAndExecuteTransaction,
+      suiClient,
+      verifySSUPostDeployConfig,
+      walletChain,
+    ],
+  );
+
   const onRetryPostDeployConfig = useCallback(async () => {
     if (
       postDeployConfig.packageId === undefined ||
@@ -1297,13 +1713,23 @@ export function useMoveBuilder(
       return;
     }
 
-    await applyGatePostDeployConfig({
-      packageId: postDeployConfig.packageId,
-      extensionConfigId: postDeployConfig.extensionConfigId,
-      adminCapId: postDeployConfig.adminCapId,
-      requestedPlan: postDeployConfig.requestedPlan,
-    });
-  }, [addLog, applyGatePostDeployConfig, postDeployConfig]);
+    const plan = postDeployConfig.requestedPlan;
+    if (plan.component === 'gate') {
+      await applyGatePostDeployConfig({
+        packageId: postDeployConfig.packageId,
+        extensionConfigId: postDeployConfig.extensionConfigId,
+        adminCapId: postDeployConfig.adminCapId,
+        requestedPlan: plan.gate,
+      });
+    } else if (plan.component === 'storage_unit') {
+      await applySSUPostDeployConfig({
+        packageId: postDeployConfig.packageId,
+        extensionConfigId: postDeployConfig.extensionConfigId,
+        adminCapId: postDeployConfig.adminCapId,
+        requestedPlan: plan.ssu,
+      });
+    }
+  }, [addLog, applyGatePostDeployConfig, applySSUPostDeployConfig, postDeployConfig]);
 
   const onRefreshPostDeployConfig = useCallback(async () => {
     if (
@@ -1311,18 +1737,30 @@ export function useMoveBuilder(
       postDeployConfig.extensionConfigId === undefined ||
       postDeployConfig.requestedPlan === undefined
     ) {
-      addLog('⚠️ No deployed gate config available to refresh');
+      addLog('⚠️ No deployed config available to refresh');
       return;
     }
 
-    await verifyGatePostDeployConfig({
-      packageId: postDeployConfig.packageId,
-      extensionConfigId: postDeployConfig.extensionConfigId,
-      requestedPlan: postDeployConfig.requestedPlan,
-      preserveStatusOnFailure:
-        postDeployConfig.status === 'failed' ? 'failed' : 'applied',
-    });
-  }, [addLog, postDeployConfig, verifyGatePostDeployConfig]);
+    const plan = postDeployConfig.requestedPlan;
+    const preserveStatusOnFailure =
+      postDeployConfig.status === 'failed' ? 'failed' as const : 'applied' as const;
+
+    if (plan.component === 'gate') {
+      await verifyGatePostDeployConfig({
+        packageId: postDeployConfig.packageId,
+        extensionConfigId: postDeployConfig.extensionConfigId,
+        requestedPlan: plan.gate,
+        preserveStatusOnFailure,
+      });
+    } else if (plan.component === 'storage_unit') {
+      await verifySSUPostDeployConfig({
+        packageId: postDeployConfig.packageId,
+        extensionConfigId: postDeployConfig.extensionConfigId,
+        requestedPlan: plan.ssu,
+        preserveStatusOnFailure,
+      });
+    }
+  }, [addLog, postDeployConfig, verifyGatePostDeployConfig, verifySSUPostDeployConfig]);
 
   const onBuild = async () => {
     addLog('── ── ── ── ──');
@@ -1552,7 +1990,7 @@ export function useMoveBuilder(
           addLog(`📦 Package ID: ${createdPkg}`);
           setPackageId(createdPkg);
 
-          if (gateDeployPlan !== null) {
+          if (deployPlan !== null) {
             const extensionConfigId = findChangedObjectIdByType(
               objectChanges,
               `${createdPkg}::config::ExtensionConfig`,
@@ -1562,25 +2000,50 @@ export function useMoveBuilder(
               `${createdPkg}::config::AdminCap`,
             );
 
-            if (extensionConfigId && adminCapId) {
+            if (deployPlan.component === 'turret') {
+              // Turret: no post-deploy rules, just log info
+              if (extensionConfigId && adminCapId) {
+                addLog(`🎯 Turret ExtensionConfig: ${extensionConfigId}`);
+                addLog(`🎯 Turret AdminCap: ${adminCapId}`);
+                setPostDeployConfig({
+                  status: 'verified',
+                  packageId: createdPkg,
+                  extensionConfigId,
+                  adminCapId,
+                  requestedPlan: deployPlan,
+                  verification: { rows: [], verifiedAt: new Date().toISOString() },
+                });
+              }
+              addLog('ℹ️ Turret extension is compile-time only; no post-deploy config needed');
+            } else if (extensionConfigId && adminCapId) {
               setPostDeployConfig({
                 status: 'ready',
                 packageId: createdPkg,
                 extensionConfigId,
                 adminCapId,
-                requestedPlan: gateDeployPlan,
+                requestedPlan: deployPlan,
               });
-              await applyGatePostDeployConfig({
-                packageId: createdPkg,
-                extensionConfigId,
-                adminCapId,
-                requestedPlan: gateDeployPlan,
-              });
+
+              if (deployPlan.component === 'gate') {
+                await applyGatePostDeployConfig({
+                  packageId: createdPkg,
+                  extensionConfigId,
+                  adminCapId,
+                  requestedPlan: deployPlan.gate,
+                });
+              } else if (deployPlan.component === 'storage_unit') {
+                await applySSUPostDeployConfig({
+                  packageId: createdPkg,
+                  extensionConfigId,
+                  adminCapId,
+                  requestedPlan: deployPlan.ssu,
+                });
+              }
             } else {
               setPostDeployConfig({
                 status: 'failed',
                 packageId: createdPkg,
-                requestedPlan: gateDeployPlan,
+                requestedPlan: deployPlan,
                 error:
                   'Could not locate AdminCap / ExtensionConfig object IDs in publish effects.',
               });
@@ -1588,10 +2051,14 @@ export function useMoveBuilder(
                 '⚠️ Could not locate AdminCap / ExtensionConfig object IDs in publish effects; post-deploy config skipped',
               );
             }
-          } else if (options?.templateId?.startsWith('gate_')) {
-            addLog(
-              'ℹ️ This gate configuration is compile-time only; no post-deploy config transaction is required',
-            );
+          } else {
+            // Template without post-deploy rules
+            const tid = options?.templateId ?? '';
+            if (tid.startsWith('gate_') || tid.startsWith('ssu_')) {
+              addLog(
+                'ℹ️ This configuration is compile-time only; no post-deploy config transaction is required',
+              );
+            }
           }
         } else {
           addLog('Package ID no found in effects');

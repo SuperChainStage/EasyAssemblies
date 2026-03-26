@@ -149,3 +149,30 @@ export function getDeploymentTargetConfig(
 ): DeploymentTargetConfig {
   return DEPLOYMENT_TARGET_CONFIGS[targetId];
 }
+
+// ---------------------------------------------------------------------------
+// World contract module paths (used for authorization & rule configuration)
+// ---------------------------------------------------------------------------
+
+export const WORLD_MODULES = {
+  CHARACTER: 'character',
+  GATE: 'gate',
+  STORAGE_UNIT: 'storage_unit',
+  TURRET: 'turret',
+} as const;
+
+export type AssemblyComponentType = 'gate' | 'storage_unit' | 'turret';
+
+/** Map from assembly component type → world contract module name. */
+export const ASSEMBLY_MODULE: Record<AssemblyComponentType, string> = {
+  gate: WORLD_MODULES.GATE,
+  storage_unit: WORLD_MODULES.STORAGE_UNIT,
+  turret: WORLD_MODULES.TURRET,
+};
+
+/** Map from assembly component type → world contract struct name. */
+export const ASSEMBLY_STRUCT: Record<AssemblyComponentType, string> = {
+  gate: 'Gate',
+  storage_unit: 'StorageUnit',
+  turret: 'Turret',
+};
