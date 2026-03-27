@@ -60,6 +60,8 @@ export function FileTree({
       {tree.map((node) => {
         const isFile = Boolean(node.path);
         const isSelected = node.path === selectedPath;
+        const ext = isFile ? node.name.split('.').pop() : '';
+        const icon = !isFile ? '📁' : ext === 'move' ? '⚡' : ext === 'toml' ? '⚙' : '📄';
 
         return (
           <div key={node.path ?? `dir-${node.name}-${depth}`}>
@@ -70,20 +72,30 @@ export function FileTree({
                 paddingBottom: 4,
                 paddingRight: 8,
                 cursor: isFile ? 'pointer' : 'default',
-                backgroundColor: isSelected ? 'rgba(99,102,241,0.2)' : 'transparent',
-                borderLeft: isSelected ? '2px solid #6366f1' : '2px solid transparent',
-                color: isSelected ? '#c7d2fe' : isFile ? '#d1d5db' : '#9ca3af',
+                backgroundColor: isSelected ? 'rgba(0, 242, 255, 0.08)' : 'transparent',
+                borderLeft: isSelected ? '2px solid var(--accent-cyan)' : '2px solid transparent',
+                color: isSelected ? 'var(--accent-cyan)' : isFile ? 'var(--text-primary)' : 'var(--text-secondary)',
                 fontSize: '13px',
-                fontFamily: "'JetBrains Mono', monospace",
+                fontFamily: 'var(--font-mono)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
                 userSelect: 'none',
-                transition: 'background-color 0.1s',
+                transition: 'background-color 0.12s, color 0.12s',
               }}
               onClick={() => isFile && node.path && onSelect(node.path)}
+              onMouseEnter={(e) => {
+                if (isFile && !isSelected) {
+                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(0, 242, 255, 0.04)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isSelected) {
+                  (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';
+                }
+              }}
             >
-              <span style={{ fontSize: '12px' }}>{isFile ? '📄' : '📁'}</span>
+              <span style={{ fontSize: '12px', flexShrink: 0 }}>{icon}</span>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {node.name}
               </span>

@@ -1,12 +1,15 @@
+/* ═══ ActionBar — Bottom Command Strip ═══ */
+
 .playground-actions {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 8px 16px;
-  background-color: #252526;
-  border-top: 1px solid #333;
-  color: #ccc;
-  font-family: 'Inter', sans-serif;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-dim);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  flex-shrink: 0;
 }
 
 .playground-spacer {
@@ -20,67 +23,73 @@
   height: 32px;
   padding: 0 16px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s var(--ease-out-expo);
 }
 
 .playground-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
-/* Toggle Console Button */
+/* Toggle Console */
 .playground-btn--toggle {
-  background-color: transparent;
-  color: #888;
+  background: transparent;
+  color: var(--text-muted);
   padding: 0 8px;
   border: 1px solid transparent;
 }
 .playground-btn--toggle:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #ccc;
+  background: rgba(0, 242, 255, 0.05);
+  color: var(--accent-cyan);
 }
 .playground-btn--toggle.active {
-  color: #fff;
-  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--accent-cyan);
+  background: rgba(0, 242, 255, 0.08);
+  border-color: rgba(0, 242, 255, 0.15);
 }
 
 /* Network Select */
 .playground-network-select {
   height: 32px;
   padding: 0 12px;
-  border-radius: 4px;
-  border: 1px solid #444;
-  background-color: #1a1a1a;
-  color: #ccc;
-  font-size: 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-dim);
+  background: var(--bg-inset);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: var(--font-mono);
   cursor: pointer;
   outline: none;
-  font-family: inherit;
+  transition: border-color 0.15s;
 }
 .playground-network-select:focus {
-  border-color: #6366f1;
+  border-color: var(--accent-cyan);
 }
 
 /* Build Button */
 .playground-btn--build {
-  background-color: #37373d;
-  color: #fff;
-  border: 1px solid #454545;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-dim);
 }
 .playground-btn--build:not(:disabled):hover {
-  background-color: #454545;
+  border-color: var(--accent-cyan);
+  box-shadow: var(--glow-cyan);
+  color: var(--accent-cyan);
 }
 
 /* Deploy / Connect Button */
 .playground-btn--deploy {
-  background-color: #6366f1;
-  color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, rgba(0, 242, 255, 0.15) 0%, rgba(0, 242, 255, 0.08) 100%);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 242, 255, 0.3);
+  box-shadow: 0 0 8px rgba(0, 242, 255, 0.1);
 }
 .playground-btn--deploy:not(:disabled):hover {
-  background-color: #4f46e5;
+  background: linear-gradient(135deg, rgba(0, 242, 255, 0.25) 0%, rgba(0, 242, 255, 0.12) 100%);
+  box-shadow: var(--glow-cyan);
 }

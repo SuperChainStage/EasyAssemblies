@@ -5,12 +5,20 @@ import type { AssemblyTemplate } from '@/templates/types';
 import { ConfigForm } from '@/components/ConfigForm';
 import { ChipSelector } from '@/components/ChipSelector';
 import type { ChipSelectorResult } from '@/components/ChipSelector';
+import { Navbar } from '@/components/Navbar';
+import { StatusBar } from '@/components/StatusBar';
+import './page.css';
 
-const ASSEMBLY_GROUPS = [
-  { icon: '🛡️', label: 'Smart Gate', templates: GATE_TEMPLATES },
-  { icon: '📦', label: 'Storage Unit', templates: SSU_TEMPLATES },
-  { icon: '🔫', label: 'Turret', templates: TURRET_TEMPLATES },
-  { icon: '🧪', label: 'Pipeline Test', templates: TEST_TEMPLATES },
+const ASSEMBLY_GROUPS: {
+  icon: string;
+  label: string;
+  accentClass: string;
+  templates: AssemblyTemplate[];
+}[] = [
+  { icon: '🛡️', label: 'Smart Gate', accentClass: 'group--gate', templates: GATE_TEMPLATES },
+  { icon: '📦', label: 'Storage Unit', accentClass: 'group--ssu', templates: SSU_TEMPLATES },
+  { icon: '🔫', label: 'Turret', accentClass: 'group--turret', templates: TURRET_TEMPLATES },
+  { icon: '🧪', label: 'Pipeline Test', accentClass: 'group--test', templates: TEST_TEMPLATES },
 ];
 
 function TemplateCard({
@@ -22,55 +30,10 @@ function TemplateCard({
 }) {
   const hasChips = !!template.chipConfig;
   return (
-    <button
-      onClick={onClick}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        gap: '8px',
-        width: '100%',
-        padding: '20px 24px',
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid #30363d',
-        borderRadius: '10px',
-        color: '#e6edf3',
-        cursor: 'pointer',
-        textAlign: 'left',
-        transition: 'all 0.18s ease',
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background =
-          'rgba(68,147,248,0.08)';
-        (e.currentTarget as HTMLButtonElement).style.borderColor = '#4493f8';
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background =
-          'rgba(255,255,255,0.04)';
-        (e.currentTarget as HTMLButtonElement).style.borderColor = '#30363d';
-      }}
-    >
-      <span
-        style={{
-          fontSize: '13px',
-          fontWeight: 600,
-          color: '#e6edf3',
-          letterSpacing: '0.2px',
-        }}
-      >
-        {template.label}
-      </span>
-      <span style={{ fontSize: '12px', color: '#8b949e', lineHeight: '1.5' }}>
-        {template.description}
-      </span>
-      <span
-        style={{
-          marginTop: '4px',
-          fontSize: '11px',
-          color: '#4493f8',
-          fontWeight: 500,
-        }}
-      >
+    <button type="button" className="tpl-card" onClick={onClick}>
+      <span className="tpl-card__label">{template.label}</span>
+      <span className="tpl-card__desc">{template.description}</span>
+      <span className="tpl-card__action">
         {hasChips ? 'Configure chips →' : 'Open in Playground →'}
       </span>
     </button>
@@ -116,20 +79,11 @@ export default function IndexPage() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: '#0d1117',
-        color: '#e6edf3',
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '60px 24px 80px',
-      }}
-    >
-      {/* ConfigForm modal (simple key-value templates) */}
-      {configTarget && configTarget.configFields && (
+    <div className="home">
+      <Navbar />
+
+      {/* Modals */}
+      {configTarget?.configFields && (
         <ConfigForm
           fields={configTarget.configFields}
           templateLabel={configTarget.label}
@@ -137,9 +91,7 @@ export default function IndexPage() {
           onCancel={() => setConfigTarget(null)}
         />
       )}
-
-      {/* ChipSelector modal (chip-based templates) */}
-      {chipTarget && chipTarget.chipConfig && (
+      {chipTarget?.chipConfig && (
         <ChipSelector
           title={chipTarget.label}
           chips={chipTarget.chipConfig.chips}
@@ -151,107 +103,49 @@ export default function IndexPage() {
         />
       )}
 
-      {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: '56px', maxWidth: '600px' }}>
-        <div
-          style={{
-            display: 'inline-block',
-            fontSize: '11px',
-            fontWeight: 600,
-            letterSpacing: '1.5px',
-            textTransform: 'uppercase',
-            color: '#4493f8',
-            background: 'rgba(68,147,248,0.1)',
-            border: '1px solid rgba(68,147,248,0.2)',
-            borderRadius: '100px',
-            padding: '4px 14px',
-            marginBottom: '20px',
-          }}
-        >
-          EVE Frontier
+      {/* Starfield background */}
+      <div className="home__stars" aria-hidden="true" />
+
+      {/* Main content */}
+      <main className="home__main">
+        {/* Hero */}
+        <header className="home__hero">
+          <span className="home__hero-badge">EVE Frontier</span>
+          <h1 className="home__hero-title">EasyAssemblies</h1>
+          <p className="home__hero-sub">
+            Deploy smart assemblies in clicks, not code.
+          </p>
+        </header>
+
+        {/* Template Groups */}
+        <div className="home__groups">
+          {ASSEMBLY_GROUPS.map(group => (
+            <section key={group.label} className={`home__group ${group.accentClass}`}>
+              <div className="home__group-header">
+                <span className="home__group-icon">{group.icon}</span>
+                <span className="home__group-label">{group.label}</span>
+                <span className="home__group-count">{group.templates.length}</span>
+              </div>
+
+              {group.templates.length > 0 ? (
+                <div className="home__group-grid">
+                  {group.templates.map(tpl => (
+                    <TemplateCard
+                      key={tpl.id}
+                      template={tpl}
+                      onClick={() => handleTemplateClick(tpl)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="home__group-empty">Coming soon…</div>
+              )}
+            </section>
+          ))}
         </div>
-        <h1
-          style={{
-            fontSize: '42px',
-            fontWeight: 700,
-            margin: '0 0 14px',
-            letterSpacing: '-0.5px',
-            background: 'linear-gradient(135deg, #e6edf3 0%, #8b949e 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}
-        >
-          EasyAssemblies
-        </h1>
-        <p style={{ fontSize: '16px', color: '#8b949e', margin: 0, lineHeight: '1.6' }}>
-          Deploy smart assemblies in clicks, not code.
-        </p>
-      </div>
+      </main>
 
-      {/* Template Groups */}
-      <div style={{ width: '100%', maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '40px' }}>
-        {ASSEMBLY_GROUPS.map((group) => (
-          <section key={group.label}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                marginBottom: '16px',
-                paddingBottom: '12px',
-                borderBottom: '1px solid #21262d',
-              }}
-            >
-              <span style={{ fontSize: '18px' }}>{group.icon}</span>
-              <span style={{ fontSize: '14px', fontWeight: 600, color: '#e6edf3' }}>
-                {group.label}
-              </span>
-              <span
-                style={{
-                  fontSize: '11px',
-                  color: '#8b949e',
-                  background: '#21262d',
-                  borderRadius: '100px',
-                  padding: '1px 8px',
-                }}
-              >
-                {group.templates.length}
-              </span>
-            </div>
-
-            {group.templates.length > 0 ? (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                  gap: '12px',
-                }}
-              >
-                {group.templates.map((tpl) => (
-                  <TemplateCard
-                    key={tpl.id}
-                    template={tpl}
-                    onClick={() => handleTemplateClick(tpl)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div
-                style={{
-                  padding: '24px',
-                  border: '1px dashed #21262d',
-                  borderRadius: '10px',
-                  textAlign: 'center',
-                  color: '#8b949e',
-                  fontSize: '13px',
-                }}
-              >
-                Coming soon...
-              </div>
-            )}
-          </section>
-        ))}
-      </div>
+      <StatusBar />
     </div>
   );
 }

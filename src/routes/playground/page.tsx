@@ -3,6 +3,8 @@ import { AuthorizePanel } from '@/components/AuthorizePanel';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Console } from '@/components/Console';
 import { FileTree, buildFileTree } from '@/components/FileTree';
+import { Navbar } from '@/components/Navbar';
+import { StatusBar } from '@/components/StatusBar';
 import { useNetworkVariable } from '@/config/dapp-kit';
 import { useMoveBuilder } from '@/hooks/useMoveBuilder';
 import { getTemplate } from '@/templates';
@@ -10,6 +12,7 @@ import type { ConfigField, ChipTemplateConfig } from '@/templates/types';
 import type { Chip } from '@/templates/chip-types';
 import { useNavigate, useSearchParams } from '@modern-js/runtime/router';
 import { useEffect, useMemo, useState } from 'react';
+import './page.css';
 
 export default function PlaygroundPage() {
   // Core state management
@@ -109,104 +112,28 @@ export default function PlaygroundPage() {
 
   // TODO: Tasks 1.6 will populate console
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        width: '100%',
-        backgroundColor: '#1E1E1E',
-        color: '#fff',
-        overflow: 'hidden',
-        fontFamily: "'Inter', sans-serif",
-      }}
-    >
+    <div className="pg">
       {/* Navbar */}
-      <div
-        style={{
-          height: '48px',
-          borderBottom: '1px solid #333',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 16px',
-          gap: '12px',
-          backgroundColor: '#252526',
-          flexShrink: 0,
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#666',
-            cursor: 'pointer',
-            fontSize: '18px',
-            lineHeight: 1,
-            padding: '0 4px',
-          }}
-          title="Back to templates"
-        >
-          ←
-        </button>
-        <h1
-          style={{
-            fontSize: '15px',
-            fontWeight: 600,
-            margin: 0,
-            color: '#ccc',
-          }}
-        >
-          Assembly Forge
-        </h1>
-        {templateId && getTemplate(templateId) && (
-          <span
-            style={{
-              fontSize: '12px',
-              color: '#888',
-              backgroundColor: '#111',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              border: '1px solid #333',
-            }}
+      <Navbar
+        left={
+          <button
+            type="button"
+            className="ev-navbar__back-btn"
+            onClick={() => navigate('/')}
+            title="Back to templates"
           >
-            {getTemplate(templateId)?.label}
-          </span>
-        )}
-      </div>
+            ← Back
+          </button>
+        }
+        title="Assembly Forge"
+        badge={template?.label}
+      />
 
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'row',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Sidebar: FileTree */}
-        <div
-          style={{
-            width: '240px',
-            borderRight: '1px solid #333',
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundColor: '#252526',
-          }}
-        >
-          <div
-            style={{
-              padding: '12px 16px',
-              borderBottom: '1px solid #333',
-              color: '#888',
-              fontSize: '12px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}
-          >
-            Explorer
-          </div>
-          <div style={{ flex: 1, overflow: 'auto' }}>
+      <div className="pg__body">
+        {/* Sidebar */}
+        <aside className="pg__sidebar">
+          <div className="pg__sidebar-header">Explorer</div>
+          <div className="pg__sidebar-tree">
             <FileTree
               tree={fileTree}
               selectedPath={selectedPath}
@@ -225,14 +152,11 @@ export default function PlaygroundPage() {
               values={activeConfig}
             />
           ) : null}
-        </div>
+        </aside>
 
-        {/* Main Column: Editor (Task 1.5) + Console (Task 1.6) */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          {/* Editor Area */}
-          <div
-            style={{ flex: 1, backgroundColor: '#1E1E1E', overflow: 'hidden' }}
-          >
+        {/* Main column */}
+        <div className="pg__main">
+          <div className="pg__editor">
             {selectedPath ? (
               <CodeEditor
                 value={files[selectedPath] ?? ''}
@@ -241,16 +165,7 @@ export default function PlaygroundPage() {
                 readOnly={busy || isPublishing}
               />
             ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  color: '#666',
-                  fontSize: '14px',
-                }}
-              >
+              <div className="pg__editor-placeholder">
                 {buildReady ? 'Select a file to edit' : 'Loading template…'}
               </div>
             )}
@@ -288,6 +203,11 @@ export default function PlaygroundPage() {
           />
         </div>
       </div>
+
+      <StatusBar
+        buildStatus={busy ? 'building' : buildOk === true ? 'success' : buildOk === false ? 'error' : 'idle'}
+        deployStatus={isPublishing ? 'deploying' : packageId ? 'success' : 'idle'}
+      />
     </div>
   );
 }
@@ -369,7 +289,7 @@ function ConfigSummary({
   return (
     <div
       style={{
-        borderTop: '1px solid #333',
+        borderTop: '1px solid var(--border-dim)',
         padding: '12px 16px',
         display: 'flex',
         flexDirection: 'column',
@@ -380,9 +300,10 @@ function ConfigSummary({
       <span
         style={{
           fontSize: '12px',
-          color: '#888',
+          color: 'var(--text-secondary)',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
+          fontFamily: 'var(--font-display)',
         }}
       >
         Config

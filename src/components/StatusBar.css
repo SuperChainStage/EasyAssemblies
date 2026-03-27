@@ -1,0 +1,65 @@
+/* ═══ StatusBar — Bottom Info Strip ═══ */
+
+.ev-statusbar {
+  height: var(--statusbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-dim);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.ev-statusbar__left,
+.ev-statusbar__right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ev-statusbar__item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ev-statusbar__item--dim {
+  color: var(--text-muted);
+}
+
+.ev-statusbar__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 4px var(--accent-cyan);
+}
+
+.ev-statusbar__indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.ev-statusbar__indicator--building {
+  color: var(--accent-yellow);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.ev-statusbar__indicator--success {
+  color: var(--accent-green);
+  background: rgba(63, 185, 80, 0.08);
+}
+
+.ev-statusbar__indicator--error {
+  color: var(--accent-red);
+  background: rgba(255, 61, 61, 0.08);
+}

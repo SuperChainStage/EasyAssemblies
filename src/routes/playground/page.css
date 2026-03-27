@@ -1,0 +1,68 @@
+/* ═══════════════════════════════════════════════════════════════
+   Playground — Deep‑Space IDE Theme
+   ═══════════════════════════════════════════════════════════════ */
+
+.pg {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  background: var(--bg-void);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+.pg__body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.pg__sidebar {
+  width: var(--sidebar-w);
+  border-right: 1px solid var(--border-dim);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  flex-shrink: 0;
+}
+
+.pg__sidebar-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.pg__sidebar-tree {
+  flex: 1;
+  overflow: auto;
+}
+
+/* ── Main column ── */
+.pg__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pg__editor {
+  flex: 1;
+  background: var(--bg-inset);
+  overflow: hidden;
+}
+
+.pg__editor-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 14px;
+}
