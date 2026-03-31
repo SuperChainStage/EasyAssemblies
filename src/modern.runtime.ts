@@ -1,5 +1,9 @@
 import { defineRuntimeConfig } from '@modern-js/runtime';
 
+const useHashRouterInProduction = process.env.NODE_ENV === 'production';
+
 export default defineRuntimeConfig({
-  router: true,
+  router: {
+    supportHtml5History: !useHashRouterInProduction,
+  },
 });

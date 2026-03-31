@@ -276,7 +276,7 @@ pnpm build
 
 This exports the static site into `docs/` for GitHub Pages. The build step also generates HTML shells for fixed app routes such as `/forge`, `/deploy`, and `/playground`, so direct visits under `https://superchainstage.github.io/EasyAssemblies/` return real files instead of relying only on `404.html`.
 
-If you deploy `docs/` to GitHub Pages, keep the site mounted at the repository subpath `/EasyAssemblies/`.
+Development still uses normal path routing. When deployed to GitHub Pages, the production build switches to hash routing so the homepage stays at `https://superchainstage.github.io/EasyAssemblies/` while deep links resolve as `#/forge`, `#/deploy`, and so on. The generated route shells and `404.html` redirect legacy path-style URLs such as `/EasyAssemblies/forge?template=...` to the canonical hash URL automatically.
 
 ### Network Selection
 

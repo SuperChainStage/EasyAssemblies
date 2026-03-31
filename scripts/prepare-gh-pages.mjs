@@ -58,6 +58,50 @@ async function writeRouteShell(outputPath, html) {
   await writeFile(outputPath, html);
 }
 
+function detectAppBasePath(indexHtml) {
+  const assetMatch = indexHtml.match(/(?:src|href)="([^"]*?)static\//);
+  const rawBase = assetMatch?.[1] ?? '/';
+  return rawBase.replace(/\/+$/, '');
+}
+
+function createHashRedirectHtml(appBasePath) {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      (function () {
+        var appBasePath = ${JSON.stringify(appBasePath)};
+        var normalizedBase = appBasePath && appBasePath !== '/' ? appBasePath : '';
+        var pathname = window.location.pathname || '/';
+        var routePath = pathname;
+
+        if (normalizedBase && routePath === normalizedBase) {
+          routePath = '/';
+        } else if (normalizedBase && routePath.indexOf(normalizedBase + '/') === 0) {
+          routePath = routePath.slice(normalizedBase.length);
+        }
+
+        routePath = routePath.replace(/\\/+$/, '') || '/';
+
+        if (routePath.charAt(0) !== '/') {
+          routePath = '/' + routePath;
+        }
+
+        var nextPath = (normalizedBase || '') + '/#' + routePath + (window.location.search || '');
+        window.location.replace(nextPath);
+      })();
+    </script>
+  </head>
+  <body>
+    Redirecting...
+  </body>
+</html>
+`;
+}
+
 async function main() {
   const [indexHtml, nestedRoutesJson] = await Promise.all([
     readFile(indexHtmlPath, 'utf8'),
@@ -66,6 +110,8 @@ async function main() {
 
   const nestedRoutes = JSON.parse(nestedRoutesJson);
   const staticRoutes = new Set(['/']);
+  const appBasePath = detectAppBasePath(indexHtml);
+  const redirectHtml = createHashRedirectHtml(appBasePath);
 
   for (const entryRoutes of Object.values(nestedRoutes)) {
     for (const routeNode of entryRoutes) {
@@ -78,16 +124,16 @@ async function main() {
     .sort((left, right) => left.localeCompare(right));
 
   await Promise.all([
-    writeFile(join(outputDir, '404.html'), indexHtml),
+    writeFile(join(outputDir, '404.html'), redirectHtml),
     writeFile(join(outputDir, '.nojekyll'), ''),
   ]);
 
   for (const route of shellRoutes) {
     const shellPath = join(outputDir, route.slice(1), 'index.html');
-    await writeRouteShell(shellPath, indexHtml);
+    await writeRouteShell(shellPath, redirectHtml);
   }
 
-  console.log(`Prepared GitHub Pages shells in ${outputDir}`);
+  console.log(`Prepared GitHub Pages redirects in ${outputDir}`);
   console.log('  Added: 404.html, .nojekyll');
 
   if (shellRoutes.length === 0) {
@@ -95,7 +141,7 @@ async function main() {
     return;
   }
 
-  console.log(`  Added route shells for: ${shellRoutes.join(', ')}`);
+  console.log(`  Added redirect shells for: ${shellRoutes.join(', ')}`);
 }
 
 main().catch(error => {

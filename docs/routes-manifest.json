@@ -13,8 +13,8 @@
         "/EasyAssemblies/static/js/async/153.1195df6a9b.js",
         "/EasyAssemblies/static/js/async/539.64afae2c30.js",
         "/EasyAssemblies/static/js/async/925.9b5ccc0dcf.js",
-        "/EasyAssemblies/static/js/async/deploy/page.b0979b9f4a.js",
-        "/EasyAssemblies/static/css/async/deploy/page.1c744ca4a6.css"
+        "/EasyAssemblies/static/css/async/deploy/page.1c744ca4a6.css",
+        "/EasyAssemblies/static/js/async/deploy/page.b0979b9f4a.js"
       ],
       "referenceCssAssets": [
         "/EasyAssemblies/static/css/async/deploy/page.1c744ca4a6.css"
@@ -35,8 +35,8 @@
         "/EasyAssemblies/static/js/async/153.1195df6a9b.js",
         "/EasyAssemblies/static/js/async/539.64afae2c30.js",
         "/EasyAssemblies/static/js/async/530.9bdb2e5bcf.js",
-        "/EasyAssemblies/static/js/async/forge/page.716d72bde9.js",
-        "/EasyAssemblies/static/css/async/forge/page.02d82842ce.css"
+        "/EasyAssemblies/static/css/async/forge/page.02d82842ce.css",
+        "/EasyAssemblies/static/js/async/forge/page.716d72bde9.js"
       ],
       "referenceCssAssets": [
         "/EasyAssemblies/static/css/async/forge/page.02d82842ce.css"
@@ -55,9 +55,9 @@
         "/EasyAssemblies/static/js/lib-react.2d2c57f0e0.js",
         "/EasyAssemblies/static/js/lib-router.bb64cbb1a7.js",
         "/EasyAssemblies/static/js/lib-polyfill.15abbb0b84.js",
-        "/EasyAssemblies/static/js/618.38b97e61ef.js",
         "/EasyAssemblies/static/css/618.1b715ab5b1.css",
-        "/EasyAssemblies/static/js/index.96457ed014.js",
+        "/EasyAssemblies/static/js/618.f49f608a16.js",
+        "/EasyAssemblies/static/js/index.a93507930a.js",
         "/EasyAssemblies/static/css/index.d5cbb1259a.css"
       ],
       "referenceCssAssets": [
@@ -72,8 +72,8 @@
       ],
       "assets": [
         "/EasyAssemblies/static/js/async/153.1195df6a9b.js",
-        "/EasyAssemblies/static/css/async/page.6f41bc40be.css",
-        "/EasyAssemblies/static/js/async/page.1b581d3fc7.js"
+        "/EasyAssemblies/static/js/async/page.1b581d3fc7.js",
+        "/EasyAssemblies/static/css/async/page.6f41bc40be.css"
       ],
       "referenceCssAssets": [
         "/EasyAssemblies/static/css/async/page.6f41bc40be.css"
