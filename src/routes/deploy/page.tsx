@@ -82,20 +82,18 @@ export default function DeployPage() {
 
   return (
     <div className="deploy">
-      {/* ── Custom Header ── */}
+      {/* ── Custom Header (matches forge) ── */}
       <header className="deploy__header">
         <button type="button" className="deploy__back" onClick={() => navigate(-1 as unknown as string)}>
           ← Back to Forge
         </button>
-        <div className="deploy__header-center">
-          <h1 className="deploy__page-title">DEPLOYMENT</h1>
-          <p className="deploy__page-desc">{template?.label ?? 'Smart Assembly'}</p>
-        </div>
-        <div className="deploy__header-right" />
       </header>
 
       {/* ── Pipeline (centered, scrollable) ── */}
       <div className="deploy__content">
+        <h1 className="deploy__page-title">DEPLOYMENT</h1>
+        <p className="deploy__page-desc">{template?.label ?? 'Smart Assembly'}</p>
+
         <div className="deploy__pipeline">
           {/* Step 1: Connect */}
           <div className={`deploy__step ${stage === 'connect' ? 'active' : account ? 'done' : ''}`}>
@@ -164,18 +162,20 @@ export default function DeployPage() {
                   explorerBaseUrl={explorerBaseUrl}
                 />
               )}
-              {stage === 'complete' && (
-                <button
-                  type="button"
-                  className="deploy__home-btn"
-                  onClick={() => navigate('/')}
-                >
-                  ⟳ Start New Forge
-                </button>
-              )}
             </div>
           </div>
         </div>
+
+        {/* Show home button once step 3 (authorize) is visible */}
+        {packageId && (
+          <button
+            type="button"
+            className="deploy__home-btn"
+            onClick={() => navigate('/')}
+          >
+            ⟳ Start New Forge
+          </button>
+        )}
       </div>
 
       <StatusBar

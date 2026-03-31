@@ -260,8 +260,9 @@ const R1_OWNER_COLLECT: Chip = {
     // [R1] Owner Collect — validate payment amount, handle change, transfer to owner
     if (required_price > 0) {
         assert!(coin::value(&payment) >= required_price, EInsufficientPayment);
-        if (coin::value(&payment) > required_price) {
-            let change = payment.split(coin::value(&payment) - required_price, ctx);
+        let paid = coin::value(&payment);
+        if (paid > required_price) {
+            let change = payment.split(paid - required_price, ctx);
             transfer::public_transfer(change, ctx.sender());
         };
         transfer::public_transfer(payment, toll_cfg.owner_address);

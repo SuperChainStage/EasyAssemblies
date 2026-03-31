@@ -313,8 +313,9 @@ public struct VendingConfigKey has copy, drop, store {}
     // ═══════════ Revenue ═══════════
     if (total_price > 0) {
         assert!(coin::value(&payment) >= total_price, EInsufficientPayment);
-        if (coin::value(&payment) > total_price) {
-            let change = payment.split(coin::value(&payment) - total_price, ctx);
+        let paid = coin::value(&payment);
+        if (paid > total_price) {
+            let change = payment.split(paid - total_price, ctx);
             transfer::public_transfer(change, ctx.sender());
         };
         transfer::public_transfer(payment, vending_cfg.owner_address);
