@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "modern dev",
-    "build": "modern build",
+    "build": "modern build && cp docs/index.html docs/404.html && touch docs/.nojekyll",
     "serve": "modern serve",
     "lint": "biome check"
   },
