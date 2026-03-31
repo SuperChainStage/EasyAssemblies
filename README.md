@@ -35,6 +35,9 @@ EasyAssemblies removes that barrier entirely. Choose a hardware template, visual
 
 ---
 
+[Try it out here：https://superchainstage.github.io/EasyAssemblies/](https://superchainstage.github.io/EasyAssemblies/)
+
+
 ## Key Features
 
 **Visual Chip Assembly** — Select a component type, pick a template, and configure Protocol Chips through an intuitive UI. The platform generates production-ready Move source code from your selections automatically.
@@ -245,8 +248,7 @@ and template       parameters           (no server)         configure on-chain
 ### Clone and Install
 
 ```bash
-git clone https://github.com/your-org/eve-hackathon.git
-cd eve-hackathon/EasyAssemblies
+git clone https://github.com/SuperChainStage/EasyAssemblies.git
 pnpm install
 ```
 
@@ -262,7 +264,6 @@ Open [http://localhost:8080](http://localhost:8080).
 
 ```bash
 pnpm build
-pnpm start
 ```
 
 ### Network Selection
