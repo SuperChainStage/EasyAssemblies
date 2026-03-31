@@ -1,16 +1,16 @@
-/* ═══ StatusBar — Bottom Info Strip ═══ */
+/* ═══ StatusBar — Bottom Strip ═══ */
 
 .ev-statusbar {
   height: var(--statusbar-h);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
-  background: var(--bg-primary);
-  border-top: 1px solid var(--border-dim);
+  padding: 0 16px;
+  background: var(--bg-void);
+  border-top: 1px solid rgba(255,255,255,0.04);
   font-size: 11px;
   font-family: var(--font-mono);
-  color: var(--text-secondary);
+  color: var(--text-muted);
   flex-shrink: 0;
   z-index: 100;
 }
@@ -28,19 +28,17 @@
   gap: 5px;
 }
 
-.ev-statusbar__item--dim {
-  color: var(--text-muted);
-}
+.ev-statusbar__item--dim { color: var(--text-muted); }
 
 .ev-statusbar__dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--accent-cyan);
-  box-shadow: 0 0 4px var(--accent-cyan);
+  background: var(--eve-orange);
+  box-shadow: 0 0 4px var(--eve-orange);
 }
 
-.ev-statusbar__indicator {
+.ev-statusbar__ind {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -48,18 +46,15 @@
   border-radius: 3px;
   font-size: 10px;
 }
-
-.ev-statusbar__indicator--building {
-  color: var(--accent-yellow);
-  background: rgba(251, 191, 36, 0.08);
+.ev-statusbar__ind--building {
+  color: var(--eve-orange-light);
+  background: rgba(232,106,16,0.08);
 }
-
-.ev-statusbar__indicator--success {
+.ev-statusbar__ind--success {
   color: var(--accent-green);
-  background: rgba(63, 185, 80, 0.08);
+  background: rgba(38,222,129,0.08);
 }
-
-.ev-statusbar__indicator--error {
+.ev-statusbar__ind--error {
   color: var(--accent-red);
-  background: rgba(255, 61, 61, 0.08);
+  background: rgba(255,71,87,0.08);
 }

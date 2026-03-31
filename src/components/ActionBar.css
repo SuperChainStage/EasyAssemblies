@@ -43,13 +43,13 @@
   border: 1px solid transparent;
 }
 .playground-btn--toggle:hover {
-  background: rgba(0, 242, 255, 0.05);
+  background: rgba(232, 106, 16, 0.05);
   color: var(--accent-cyan);
 }
 .playground-btn--toggle.active {
   color: var(--accent-cyan);
-  background: rgba(0, 242, 255, 0.08);
-  border-color: rgba(0, 242, 255, 0.15);
+  background: rgba(232, 106, 16, 0.08);
+  border-color: rgba(232, 106, 16, 0.15);
 }
 
 /* Network Select */
@@ -84,12 +84,12 @@
 
 /* Deploy / Connect Button */
 .playground-btn--deploy {
-  background: linear-gradient(135deg, rgba(0, 242, 255, 0.15) 0%, rgba(0, 242, 255, 0.08) 100%);
+  background: linear-gradient(135deg, rgba(232, 106, 16, 0.15) 0%, rgba(232, 106, 16, 0.08) 100%);
   color: var(--accent-cyan);
-  border: 1px solid rgba(0, 242, 255, 0.3);
-  box-shadow: 0 0 8px rgba(0, 242, 255, 0.1);
+  border: 1px solid rgba(232, 106, 16, 0.3);
+  box-shadow: 0 0 8px rgba(232, 106, 16, 0.1);
 }
 .playground-btn--deploy:not(:disabled):hover {
-  background: linear-gradient(135deg, rgba(0, 242, 255, 0.25) 0%, rgba(0, 242, 255, 0.12) 100%);
+  background: linear-gradient(135deg, rgba(232, 106, 16, 0.25) 0%, rgba(232, 106, 16, 0.12) 100%);
   box-shadow: var(--glow-cyan);
 }

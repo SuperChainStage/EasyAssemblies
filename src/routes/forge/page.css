@@ -1,0 +1,206 @@
+/* ═══════════════════════════════════════════════════════════════
+   Forge Page — Engine Build Pipeline
+   ═══════════════════════════════════════════════════════════════ */
+
+.forge {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg-void);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+.forge__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Engine Column ── */
+.forge__engine-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 24px 16px;
+  flex-shrink: 0;
+}
+
+.forge__status-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.forge__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.forge__btn {
+  padding: 12px 32px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 1px;
+  font-family: var(--font-display);
+}
+
+.forge__btn--forge {
+  background: linear-gradient(135deg, var(--eve-orange) 0%, var(--eve-orange-deep) 100%);
+  border: 1px solid var(--eve-orange);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  box-shadow: 0 0 24px rgba(232,106,16,0.15), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.forge__btn--forge:hover:not(:disabled) {
+  box-shadow: 0 0 40px rgba(232,106,16,0.25), inset 0 1px 0 rgba(255,255,255,0.15);
+  transform: translateY(-1px);
+}
+.forge__btn--forge:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Expert mode toggle */
+.forge__expert-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
+}
+.forge__expert-toggle:hover {
+  color: var(--eve-orange-light);
+  background: rgba(232,106,16,0.06);
+}
+
+/* ── Expert Panel ── */
+.forge__expert {
+  flex: 1;
+  display: flex;
+  border-top: 1px solid var(--border-dim);
+  overflow: hidden;
+  animation: fade-in-up 0.3s var(--ease-out-expo);
+}
+
+.forge__sidebar {
+  width: var(--sidebar-w);
+  border-right: 1px solid var(--border-dim);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  flex-shrink: 0;
+}
+
+.forge__sidebar-header {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.forge__sidebar-tree {
+  flex: 1;
+  overflow: auto;
+}
+
+.forge__code-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.forge__editor {
+  flex: 1;
+  background: var(--bg-inset);
+  overflow: hidden;
+}
+
+.forge__editor-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ── Chip Summary in sidebar ── */
+.forge__chip-summary {
+  border-top: 1px solid var(--border-dim);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+  overflow: auto;
+}
+
+.forge__chip-summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.forge__chip-summary-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.forge__chip-summary-module {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--eve-orange-light);
+}
+
+.forge__chip-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.forge__chip-tag {
+  font-size: 9px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid;
+  line-height: 1.2;
+}
+
+.forge__config-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  padding: 2px 0;
+}
+.forge__config-row span:last-child {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

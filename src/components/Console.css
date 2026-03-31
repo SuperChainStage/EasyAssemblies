@@ -110,9 +110,9 @@
 .playground-console-action {
   height: 28px;
   padding: 0 10px;
-  border: 1px solid rgba(0, 242, 255, 0.3);
+  border: 1px solid rgba(232, 106, 16, 0.3);
   border-radius: var(--radius-sm);
-  background: rgba(0, 242, 255, 0.08);
+  background: rgba(232, 106, 16, 0.08);
   color: var(--accent-cyan);
   font-size: 11px;
   font-weight: 500;
@@ -121,7 +121,7 @@
 }
 
 .playground-console-action:hover {
-  background: rgba(0, 242, 255, 0.15);
+  background: rgba(232, 106, 16, 0.15);
   box-shadow: var(--glow-cyan);
 }
 
@@ -132,7 +132,7 @@
 }
 
 .playground-console-action--secondary:hover {
-  border-color: rgba(0, 242, 255, 0.2);
+  border-color: rgba(232, 106, 16, 0.2);
   color: var(--accent-cyan);
-  background: rgba(0, 242, 255, 0.05);
+  background: rgba(232, 106, 16, 0.05);
 }

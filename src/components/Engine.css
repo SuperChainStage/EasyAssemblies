@@ -1,0 +1,372 @@
+/* ═══════════════════════════════════════════════════════════════
+   ENGINE — Cyberpunk HUD Component
+   ═══════════════════════════════════════════════════════════════ */
+
+.engine {
+  --engine-size: 380px;
+  --core-size: calc(var(--engine-size) * 0.28);
+  --slot-orbit: calc(var(--engine-size) * 0.36);
+  --o: #E86A10;
+  --ol: #FF8C38;
+  position: relative;
+  width: var(--engine-size);
+  height: var(--engine-size);
+  flex-shrink: 0;
+  transition: filter 0.4s;
+}
+
+/* ── Ambient Glow ── */
+.engine__ambient {
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,106,16,0.05) 0%, transparent 65%);
+  transition: all 1s;
+  pointer-events: none;
+}
+.engine--armed .engine__ambient {
+  background: radial-gradient(circle, rgba(232,106,16,0.12) 0%, rgba(232,106,16,0.03) 45%, transparent 70%);
+}
+.engine--forging .engine__ambient {
+  background: radial-gradient(circle, rgba(255,200,100,0.18) 0%, rgba(232,106,16,0.06) 45%, transparent 70%);
+  animation: ambient-throb 0.6s ease-in-out infinite alternate;
+}
+.engine--done .engine__ambient {
+  background: radial-gradient(circle, rgba(38,222,129,0.1) 0%, transparent 65%);
+}
+.engine--error .engine__ambient {
+  background: radial-gradient(circle, rgba(255,71,87,0.12) 0%, transparent 65%);
+}
+
+/* ── Outer Metallic Ring ── */
+.engine__ring--outer {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--metal-dark);
+  background: transparent;
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.08),
+    inset 0 -2px 0 rgba(0,0,0,0.4),
+    0 0 30px rgba(0,0,0,0.4);
+  transition: border-color 0.6s, box-shadow 0.6s;
+}
+
+/* Tick marks (36 marks, every 10°) */
+.engine__ticks {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255,255,255,0.08) 0deg 1.2deg,
+    transparent 1.2deg 10deg
+  );
+  -webkit-mask: radial-gradient(transparent calc(50% - 7px), #000 calc(50% - 6px), #000 calc(50% + 1px), transparent calc(50% + 2px));
+  mask: radial-gradient(transparent calc(50% - 7px), #000 calc(50% - 6px), #000 calc(50% + 1px), transparent calc(50% + 2px));
+}
+
+.engine--armed .engine__ring--outer,
+.engine--forging .engine__ring--outer {
+  border-color: rgba(232,106,16,0.45);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.08),
+    0 0 30px rgba(232,106,16,0.12),
+    0 0 60px rgba(232,106,16,0.04);
+}
+.engine--done .engine__ring--outer {
+  border-color: rgba(38,222,129,0.45);
+  box-shadow: 0 0 30px rgba(38,222,129,0.12);
+}
+.engine--error .engine__ring--outer {
+  border-color: rgba(255,71,87,0.5);
+  animation: error-flash 0.4s ease-in-out infinite alternate;
+}
+
+/* Hover glow (idle only) */
+.engine--idle:hover .engine__ring--outer {
+  border-color: rgba(232,106,16,0.3);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.08),
+    0 0 24px rgba(232,106,16,0.12),
+    0 0 50px rgba(232,106,16,0.04);
+}
+.engine--idle:hover .engine__ticks {
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(232,106,16,0.15) 0deg 1.2deg,
+    transparent 1.2deg 10deg
+  );
+}
+.engine--idle:hover .engine__ambient {
+  background: radial-gradient(circle, rgba(232,106,16,0.08) 0%, transparent 65%);
+}
+.engine--idle:hover .engine__core-label {
+  color: var(--ol);
+  text-shadow: 0 0 8px rgba(232,106,16,0.4);
+}
+
+/* ── Middle Orbit Ring (rotating) ── */
+.engine__ring--mid {
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(232,106,16,0.12);
+  animation: spin 14s linear infinite;
+  transition: border-color 0.6s;
+}
+.engine--armed .engine__ring--mid {
+  border-color: rgba(232,106,16,0.3);
+  animation-duration: 6s;
+}
+.engine--forging .engine__ring--mid {
+  border-color: rgba(255,200,100,0.4);
+  animation-duration: 1.2s;
+}
+
+/* Orbital dots */
+.engine__orbit-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  margin: -1.5px;
+  border-radius: 50%;
+  background: var(--ol);
+  box-shadow: 0 0 6px var(--o), 0 0 12px rgba(232,106,16,0.2);
+  animation: orbit var(--orb-dur, 8s) linear infinite;
+  animation-delay: var(--orb-delay, 0s);
+}
+.engine--forging .engine__orbit-dot {
+  width: 4px;
+  height: 4px;
+  margin: -2px;
+  box-shadow: 0 0 8px var(--ol), 0 0 16px rgba(255,200,100,0.3);
+}
+
+/* ── Inner Ring (counter-rotate) ── */
+.engine__ring--inner {
+  position: absolute;
+  inset: 26%;
+  border-radius: 50%;
+  border: 1px solid rgba(232,106,16,0.06);
+  animation: spin-rev 22s linear infinite;
+  transition: border-color 0.6s;
+}
+.engine--armed .engine__ring--inner {
+  border-color: rgba(232,106,16,0.15);
+  animation-duration: 11s;
+}
+.engine--forging .engine__ring--inner {
+  border-color: rgba(255,200,100,0.2);
+  animation-duration: 2s;
+}
+
+/* ── Chip Slots ── */
+.engine__slots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.engine__slot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  margin: -12px;
+  border-radius: 50%;
+  transform: rotate(var(--slot-angle)) translateX(var(--slot-orbit)) rotate(calc(-1 * var(--slot-angle)));
+  border: 1.5px dashed rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.015);
+  transition: all 0.5s var(--ease-out-expo);
+}
+
+.engine__slot--filled {
+  border-style: solid;
+  border-color: var(--chip-color);
+  background: var(--chip-color);
+  box-shadow: 0 0 10px var(--chip-color), 0 0 20px rgba(0,0,0,0.3);
+  animation: slot-in 0.6s var(--ease-out-expo) both;
+}
+
+.engine__slot-glow {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: var(--chip-color);
+  filter: blur(10px);
+  opacity: 0.35;
+  animation: glow-pulse 2.5s ease-in-out infinite;
+}
+
+/* ── Drift Particles ── */
+.engine__drift {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--dc);
+  box-shadow: 0 0 5px var(--dc);
+  transform: rotate(var(--da)) translateX(var(--slot-orbit));
+  animation: drift var(--ddur, 2s) ease-out infinite;
+  animation-delay: var(--dd, 0s);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Core ── */
+.engine__core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--core-size);
+  height: var(--core-size);
+  margin: calc(var(--core-size) / -2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.engine__core-pulse {
+  position: absolute;
+  inset: -20%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,106,16,0.12) 0%, rgba(232,106,16,0.03) 50%, transparent 70%);
+  animation: breathe 3.5s ease-in-out infinite;
+  transition: background 0.6s;
+}
+.engine--armed .engine__core-pulse {
+  background: radial-gradient(circle, rgba(232,106,16,0.25) 0%, rgba(232,106,16,0.08) 50%, transparent 70%);
+  animation-duration: 1.8s;
+}
+.engine--forging .engine__core-pulse {
+  background: radial-gradient(circle, rgba(255,220,150,0.35) 0%, rgba(232,106,16,0.12) 50%, transparent 70%);
+  animation-duration: 0.4s;
+}
+.engine--done .engine__core-pulse {
+  background: radial-gradient(circle, rgba(38,222,129,0.25) 0%, transparent 65%);
+  animation-duration: 3s;
+}
+.engine--error .engine__core-pulse {
+  background: radial-gradient(circle, rgba(255,71,87,0.25) 0%, transparent 65%);
+  animation: error-flash 0.4s ease-in-out infinite alternate;
+}
+
+.engine__core-inner {
+  position: relative;
+  width: 72%;
+  height: 72%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #171B28 0%, #0C0E14 100%);
+  border: 1px solid rgba(232,106,16,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.04);
+  transition: border-color 0.6s;
+}
+.engine--armed .engine__core-inner { border-color: rgba(232,106,16,0.35); }
+.engine--done .engine__core-inner  { border-color: rgba(38,222,129,0.35); }
+.engine--error .engine__core-inner { border-color: rgba(255,71,87,0.35); }
+
+.engine__core-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: calc(var(--engine-size) * 0.03);
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: rgba(232,106,16,0.4);
+  text-transform: uppercase;
+  transition: color 0.6s, text-shadow 0.6s;
+  user-select: none;
+}
+.engine--armed .engine__core-label {
+  color: var(--ol);
+  text-shadow: 0 0 12px rgba(232,106,16,0.5);
+}
+.engine--forging .engine__core-label {
+  color: #FFF5E6;
+  text-shadow: 0 0 16px rgba(255,200,100,0.6);
+}
+.engine--done .engine__core-label {
+  color: #26DE81;
+  text-shadow: 0 0 12px rgba(38,222,129,0.5);
+}
+.engine--error .engine__core-label {
+  color: #FF4757;
+  animation: error-flash 0.4s ease-in-out infinite alternate;
+}
+
+/* ── Scanner Beam ── */
+.engine__scanner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.engine__scanner::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50%;
+  height: 2px;
+  transform-origin: left center;
+  background: linear-gradient(90deg, transparent 0%, rgba(232,106,16,0.3) 40%, rgba(232,106,16,0.6) 80%, transparent 100%);
+  animation: spin 5s linear infinite;
+}
+.engine--forging .engine__scanner::before {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,200,100,0.4) 40%, rgba(255,200,100,0.8) 80%, transparent 100%);
+  animation-duration: 0.8s;
+}
+.engine--idle .engine__scanner::before { opacity: 0.5; }
+
+/* ═══ KEYFRAMES ═══ */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes spin-rev {
+  to { transform: rotate(-360deg); }
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(0.92); opacity: 0.5; }
+  50%      { transform: scale(1.08); opacity: 1; }
+}
+@keyframes orbit {
+  from { transform: rotate(0deg) translateX(calc(var(--engine-size) * 0.35)) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(calc(var(--engine-size) * 0.35)) rotate(-360deg); }
+}
+@keyframes drift {
+  0%   { opacity: 0.7; transform: rotate(var(--da)) translateX(var(--slot-orbit)) translate(0,0) scale(1); }
+  100% { opacity: 0;   transform: rotate(var(--da)) translateX(var(--slot-orbit)) translate(var(--dx),var(--dy)) scale(0.2); }
+}
+@keyframes slot-in {
+  0%   { transform: rotate(var(--slot-angle)) translateX(calc(var(--slot-orbit) + 60px)) rotate(calc(-1 * var(--slot-angle))) scale(0.3); opacity: 0; }
+  100% { transform: rotate(var(--slot-angle)) translateX(var(--slot-orbit)) rotate(calc(-1 * var(--slot-angle))) scale(1); opacity: 1; }
+}
+@keyframes ambient-throb {
+  from { opacity: 0.7; transform: scale(0.98); }
+  to   { opacity: 1;   transform: scale(1.02); }
+}
+@keyframes error-flash {
+  from { opacity: 0.4; }
+  to   { opacity: 1; }
+}
+
+/* ═══ Reduced Motion ═══ */
+@media (prefers-reduced-motion: reduce) {
+  .engine__ring--mid,
+  .engine__ring--inner,
+  .engine__orbit-dot,
+  .engine__scanner::before,
+  .engine__core-pulse,
+  .engine__slot-glow,
+  .engine__drift { animation: none !important; }
+}

@@ -1,41 +1,54 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;600;700&display=swap');
 
 /* ═══════════════════════════════════════════════════════════════
-   DESIGN SYSTEM — EVE Frontier Deep‑Space Theme
+   DESIGN SYSTEM — EVE Frontier Industrial Orange Theme
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Backgrounds ── */
-  --bg-void:       #050a14;      /* deepest layer (body) */
-  --bg-primary:    #0a0e1a;      /* main panels */
-  --bg-secondary:  #111827;      /* raised panels */
-  --bg-card:       rgba(17, 24, 39, 0.80);
-  --bg-card-hover: rgba(17, 24, 39, 0.95);
-  --bg-surface:    #1c2333;      /* input backgrounds */
-  --bg-inset:      #0d1117;      /* code blocks / inset */
+  /* ── EVE Frontier Core Palette ── */
+  --eve-orange:       #E86A10;
+  --eve-orange-light: #FF8C38;
+  --eve-orange-dim:   #A04A0A;
+  --eve-amber:        #FFB347;
 
-  /* ── Accent palette ── */
-  --accent-cyan:   #00f2ff;      /* primary neon (safe/pass) */
-  --accent-orange: #ff6b00;      /* industrial orange (warnings) */
-  --accent-red:    #ff3d3d;      /* alert red (errors/block) */
-  --accent-purple: #a855f7;      /* mystic purple */
-  --accent-blue:   #4493f8;      /* UI links / info */
-  --accent-green:  #3fb950;      /* success */
-  --accent-yellow: #fbbf24;      /* caution */
+  /* ── Backgrounds (deep space) ── */
+  --bg-void:       #08090C;
+  --bg-primary:    #0C0E14;
+  --bg-secondary:  #12151E;
+  --bg-card:       rgba(18, 21, 30, 0.75);
+  --bg-card-hover: rgba(18, 21, 30, 0.92);
+  --bg-surface:    #1A1D2A;
+  --bg-inset:      #0A0C12;
+  --bg-elevated:   #222639;
+
+  /* ── Metal Tones ── */
+  --metal-light:   #8A8E96;
+  --metal-mid:     #5C5F68;
+  --metal-dark:    #3E4148;
+  --metal-shadow:  #2C2E34;
+
+  /* ── Accents (primary = EVE orange) ── */
+  --accent-cyan:   #E86A10;     /* Primary accent (orange) — kept name for compat */
+  --accent-orange: #E86A10;
+  --accent-red:    #FF4757;
+  --accent-purple: #A55EEA;
+  --accent-blue:   #4493f8;
+  --accent-green:  #26DE81;
+  --accent-yellow: #FFC312;
 
   /* ── Text ── */
-  --text-primary:   #e0e7ff;
-  --text-secondary: #6b7280;
-  --text-muted:     #4b5563;
+  --text-primary:   #E8ECF4;
+  --text-secondary: #7B8299;
+  --text-muted:     #4A4F63;
 
   /* ── Borders & Glows ── */
-  --border-color:  rgba(0, 242, 255, 0.12);
-  --border-dim:    #1e293b;
-  --glow-cyan:     0 0 12px rgba(0, 242, 255, 0.25);
-  --glow-cyan-lg:  0 0 24px rgba(0, 242, 255, 0.20), 0 0 48px rgba(0, 242, 255, 0.08);
-  --glow-orange:   0 0 12px rgba(255, 107, 0, 0.30);
-  --glow-red:      0 0 12px rgba(255, 61, 61, 0.30);
-  --glow-purple:   0 0 12px rgba(168, 85, 247, 0.25);
+  --border-color:  rgba(232, 106, 16, 0.12);
+  --border-dim:    #1A1E2C;
+  --glow-cyan:     0 0 12px rgba(232, 106, 16, 0.25);
+  --glow-cyan-lg:  0 0 24px rgba(232, 106, 16, 0.20), 0 0 48px rgba(232, 106, 16, 0.08);
+  --glow-orange:   0 0 12px rgba(232, 106, 16, 0.30);
+  --glow-red:      0 0 12px rgba(255, 71, 87, 0.30);
+  --glow-purple:   0 0 12px rgba(165, 94, 234, 0.25);
 
   /* ── Typography ── */
   --font-ui:   'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -43,8 +56,8 @@
   --font-display: 'Orbitron', var(--font-ui);
 
   /* ── Sizing ── */
-  --navbar-h: 48px;
-  --statusbar-h: 28px;
+  --navbar-h: 52px;
+  --statusbar-h: 26px;
   --sidebar-w: 240px;
   --radius-sm: 4px;
   --radius-md: 8px;
@@ -62,6 +75,14 @@ body {
   font-family: var(--font-ui);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
+  /* Subtle star field */
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.12) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40% 65%, rgba(255,255,255,0.08) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 30%, rgba(255,255,255,0.1) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 85% 80%, rgba(232, 106, 16, 0.15) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 90%, rgba(255,255,255,0.06) 0%, transparent 100%);
+  background-attachment: fixed;
 }
 
 #root {
@@ -82,11 +103,6 @@ body {
   50%      { opacity: 1; }
 }
 
-@keyframes scan-line {
-  0%   { transform: translateY(-100%); }
-  100% { transform: translateY(100vh); }
-}
-
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -99,40 +115,32 @@ body {
 
 @keyframes float {
   0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-6px); }
+  50%      { transform: translateY(-8px); }
+}
+
+@keyframes shimmer-sweep {
+  0%, 100% { background-position: 200% 0; }
+  50%      { background-position: -200% 0; }
 }
 
 /* ═══ UTILITY CLASSES ═══ */
 
-.text-glow-cyan {
-  text-shadow: 0 0 8px rgba(0, 242, 255, 0.5), 0 0 16px rgba(0, 242, 255, 0.2);
+.text-glow-orange {
+  text-shadow: 0 0 8px rgba(232, 106, 16, 0.5), 0 0 16px rgba(232, 106, 16, 0.2);
 }
 
 .border-glow {
   border: 1px solid var(--border-color);
-  box-shadow: var(--glow-cyan), inset 0 0 8px rgba(0, 242, 255, 0.03);
+  box-shadow: var(--glow-orange), inset 0 0 8px rgba(232, 106, 16, 0.03);
 }
 
-.clip-corner {
-  clip-path: polygon(
-    0 0, calc(100% - 12px) 0, 100% 12px,
-    100% 100%, 12px 100%, 0 calc(100% - 12px)
-  );
-}
-
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 242, 255, 0.15);
+  background: rgba(232, 106, 16, 0.15);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 242, 255, 0.30);
+  background: rgba(232, 106, 16, 0.30);
 }
-
