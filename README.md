@@ -37,6 +37,8 @@ EasyAssemblies removes that barrier entirely. Choose a hardware template, visual
 
 [Try it out here：https://superchainstage.github.io/EasyAssemblies/](https://superchainstage.github.io/EasyAssemblies/)
 
+![003.png](https://github.com/SuperChainStage/EasyAssemblies/blob/main/images/003.png?raw=true)
+![004.png](https://github.com/SuperChainStage/EasyAssemblies/blob/main/images/004.png?raw=true)
 
 ## Key Features
 
@@ -219,9 +221,15 @@ and template       parameters           (no server)         configure on-chain
 ```
 
 1. **Select** — Pick a component type (Gate, SSU, or Turret) and a template from the homepage engine interface.
+![001.png](https://github.com/SuperChainStage/EasyAssemblies/blob/main/images/001.png?raw=true)
+
 2. **Configure** — Open the chip selector to enable/disable Protocol Chips and fill in parameters. Or choose a preset for common configurations.
+![002.png](https://github.com/SuperChainStage/EasyAssemblies/blob/main/images/002.png?raw=true)
 3. **Forge** — The platform generates Move source code and compiles it to WASM bytecode in your browser. Expert users can inspect and edit the source.
+![005.png](https://github.com/SuperChainStage/EasyAssemblies/blob/main/images/005.png?raw=true)
+![006.png](https://github.com/SuperChainStage/EasyAssemblies/blob/main/images/006.png?raw=true)
 4. **Deploy** — Connect your Sui wallet, publish the package to the EVE Frontier network, and run any required post-deploy configuration transactions (e.g., setting tribe IDs, prices, or object references).
+![007.png](https://github.com/SuperChainStage/EasyAssemblies/blob/main/images/007.png?raw=true)
 
 ---
 
