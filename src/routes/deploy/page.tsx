@@ -162,6 +162,23 @@ export default function DeployPage() {
                   explorerBaseUrl={explorerBaseUrl}
                 />
               )}
+
+              {/* Post-deploy config retry (second tx after publish) */}
+              {postDeployConfig?.status === 'failed' && (
+                <div className="deploy__retry-block">
+                  <p className="deploy__retry-msg">⚠ Post-deploy configuration failed. The transaction may have been rejected.</p>
+                  <button
+                    type="button"
+                    className="deploy__retry-btn"
+                    onClick={onRetryPostDeployConfig}
+                  >
+                    ⟳ Retry Configuration Transaction
+                  </button>
+                </div>
+              )}
+              {postDeployConfig?.status === 'applying' && (
+                <p className="deploy__retry-msg deploy__retry-msg--info">⏳ Applying post-deploy configuration…</p>
+              )}
             </div>
           </div>
         </div>

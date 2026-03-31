@@ -273,7 +273,46 @@
   color: var(--eve-orange-light);
 }
 
-/* ── Build Log — REMOVED from deploy page ── */
+/* ── Post-deploy config retry ── */
+.deploy__retry-block {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255,140,56,0.3);
+  border-radius: var(--radius-sm);
+  background: rgba(255,140,56,0.04);
+}
+.deploy__retry-msg {
+  margin: 0 0 10px;
+  font-size: 11px;
+  color: var(--eve-orange-light);
+  line-height: 1.5;
+}
+.deploy__retry-msg--info {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+}
+.deploy__retry-btn {
+  padding: 8px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-display);
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, rgba(255,140,56,0.15), rgba(232,106,16,0.08));
+  border: 1px solid rgba(255,140,56,0.5);
+  color: var(--eve-orange-light);
+  transition: all 0.2s;
+  animation: deploy-pulse-retry 1.5s ease-in-out infinite;
+}
+.deploy__retry-btn:hover {
+  background: linear-gradient(135deg, rgba(255,140,56,0.25), rgba(232,106,16,0.15));
+  box-shadow: 0 0 20px rgba(232,106,16,0.25);
+}
+@keyframes deploy-pulse-retry {
+  0%, 100% { box-shadow: 0 0 0 rgba(232,106,16,0); }
+  50% { box-shadow: 0 0 14px rgba(232,106,16,0.2); }
+}
 
 /* ── Home Button ── */
 .deploy__home-btn {
