@@ -266,6 +266,10 @@ Open [http://localhost:8080](http://localhost:8080).
 pnpm build
 ```
 
+This exports the static site into `docs/` for GitHub Pages. The build step also generates HTML shells for fixed app routes such as `/forge`, `/deploy`, and `/playground`, so direct visits under `https://superchainstage.github.io/EasyAssemblies/` return real files instead of relying only on `404.html`.
+
+If you deploy `docs/` to GitHub Pages, keep the site mounted at the repository subpath `/EasyAssemblies/`.
+
 ### Network Selection
 
 Append `?network=stillness` or `?network=utopia` to the URL, or toggle the network in the status bar at the bottom of the page.

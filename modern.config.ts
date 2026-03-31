@@ -1,17 +1,20 @@
 import { appTools, defineConfig } from '@modern-js/app-tools';
 
 const isProd = process.env.NODE_ENV === 'production';
+const githubPagesBase = '/EasyAssemblies/';
+const distRoot = isProd ? 'docs' : 'dist';
+const appBase = isProd ? githubPagesBase : '/';
 
 export default defineConfig({
   output: {
     distPath: {
-      root: isProd ? 'docs' : 'dist',
-      html: './', 
+      root: distRoot,
+      html: './',
     },
-    assetPrefix: isProd ? '/EasyAssemblies/' : '/',
+    assetPrefix: appBase,
   },
   server: {
-    baseUrl: isProd ? '/EasyAssemblies/' : '/',
+    baseUrl: appBase,
   },
   html: {
     outputStructure: 'flat',
@@ -19,7 +22,5 @@ export default defineConfig({
   source: {
     mainEntryName: 'index',
   },
-  plugins:[
-    appTools(),
-  ],
+  plugins: [appTools()],
 });

@@ -32,6 +32,13 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "ignore": [".vscode/**/*", "node_modules/**/*", "dist/**/*"]
+    "ignore": [
+      ".vscode/**/*",
+      "node_modules/**/*",
+      "dist/**/*",
+      "docs/**/*",
+      ".output/**/*",
+      "move-contracts/**/build/**/*"
+    ]
   }
 }
