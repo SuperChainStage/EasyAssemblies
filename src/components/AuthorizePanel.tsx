@@ -246,18 +246,22 @@ export function AuthorizePanel({
           </div>
 
           {authorizeState.status === 'failed' && (
-            <div className="authorize-error">❌ {authorizeState.error}</div>
+            <div className="authorize-error">
+              <span>❌ {authorizeState.error}</span>
+            </div>
           )}
 
           <button
             type="button"
-            className="authorize-submit-btn"
+            className={`authorize-submit-btn${authorizeState.status === 'failed' ? ' authorize-submit-btn--retry' : ''}`}
             disabled={!canSubmit}
             onClick={handleAuthorize}
           >
             {authorizeState.status === 'authorizing'
               ? 'Authorizing…'
-              : `Authorize ${assemblyLabel}`}
+              : authorizeState.status === 'failed'
+                ? `⟳ Retry Authorization`
+                : `Authorize ${assemblyLabel}`}
           </button>
         </div>
       )}

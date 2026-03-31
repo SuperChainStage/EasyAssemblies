@@ -230,11 +230,9 @@
 .home__templates.home__templates--scrollable {
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-width: thin;
+  scrollbar-width: none;
 }
-.home__templates--scrollable::-webkit-scrollbar { width: 4px; }
-.home__templates--scrollable::-webkit-scrollbar-track { background: transparent; }
-.home__templates--scrollable::-webkit-scrollbar-thumb { background: rgba(232,106,16,0.15); border-radius: 2px; }
+.home__templates--scrollable::-webkit-scrollbar { width: 0; background: transparent; }
 
 .home__templates-back {
   background: none;
@@ -495,8 +493,8 @@
 /* ═══ GitHub link ═══ */
 .home__github {
   position: absolute;
-  bottom: calc(var(--statusbar-h, 28px) + 12px);
-  left: 20px;
+  top: 18px;
+  right: 24px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -549,9 +547,8 @@
     max-height: none;
   }
   .home__github {
-    position: static;
-    justify-content: center;
-    padding: 12px 0;
+    top: 12px;
+    right: 16px;
   }
 }
 @media (max-width: 600px) {

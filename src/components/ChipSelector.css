@@ -165,9 +165,9 @@
   flex-direction: column;
   gap: 20px;
 }
-.chip-body::-webkit-scrollbar { width: 6px; }
+.chip-body::-webkit-scrollbar { width: 4px; }
 .chip-body::-webkit-scrollbar-track { background: transparent; }
-.chip-body::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+.chip-body::-webkit-scrollbar-thumb { background: rgba(232,106,16,0.06); border-radius: 2px; }
 
 /* ── Category section ── */
 .chip-category {

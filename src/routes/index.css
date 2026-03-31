@@ -135,13 +135,14 @@ body {
   box-shadow: var(--glow-orange), inset 0 0 8px rgba(232, 106, 16, 0.03);
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+/* Scrollbar — near-invisible by default */
+::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(232, 106, 16, 0.15);
-  border-radius: 3px;
+  background: rgba(232, 106, 16, 0.06);
+  border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(232, 106, 16, 0.30);
+  background: rgba(232, 106, 16, 0.15);
 }
+* { scrollbar-width: thin; scrollbar-color: rgba(232,106,16,0.06) transparent; }

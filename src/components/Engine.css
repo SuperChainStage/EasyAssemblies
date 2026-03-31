@@ -80,10 +80,10 @@
 
 /* IDLE default — warm orange glow, brighter than before */
 .engine--idle .engine__ambient {
-  background: radial-gradient(circle, rgba(232,106,16,0.14) 0%, rgba(232,106,16,0.04) 40%, transparent 65%);
+  background: radial-gradient(circle, rgba(232,106,16,0.22) 0%, rgba(232,106,16,0.08) 40%, transparent 65%);
 }
 .engine--idle:hover .engine__ambient {
-  background: radial-gradient(circle, rgba(232,106,16,0.22) 0%, rgba(232,106,16,0.08) 40%, transparent 65%);
+  background: radial-gradient(circle, rgba(255,140,56,0.35) 0%, rgba(232,106,16,0.14) 40%, transparent 65%);
 }
 .engine--armed .engine__ambient {
   background: radial-gradient(circle, rgba(232,106,16,0.16) 0%, rgba(232,106,16,0.05) 40%, transparent 65%);
@@ -125,32 +125,32 @@
 
 /* IDLE default — ticks + ring bright orange */
 .engine--idle .engine__ring--outer {
-  border-color: rgba(232,106,16,0.4);
+  border-color: rgba(232,106,16,0.55);
   box-shadow:
     inset 0 2px 0 rgba(255,255,255,0.08),
-    0 0 30px rgba(232,106,16,0.15),
-    0 0 60px rgba(232,106,16,0.05);
+    0 0 40px rgba(232,106,16,0.22),
+    0 0 80px rgba(232,106,16,0.08);
 }
 .engine--idle .engine__ticks {
   background: repeating-conic-gradient(
     from 0deg,
-    rgba(232,106,16,0.2) 0deg 1.2deg,
+    rgba(232,106,16,0.35) 0deg 1.2deg,
     transparent 1.2deg 10deg
   );
 }
 
 /* IDLE hover — intensified */
 .engine--idle:hover .engine__ring--outer {
-  border-color: rgba(232,106,16,0.6);
+  border-color: rgba(255,140,56,0.75);
   box-shadow:
-    inset 0 2px 0 rgba(255,255,255,0.1),
-    0 0 50px rgba(232,106,16,0.25),
-    0 0 100px rgba(232,106,16,0.08);
+    inset 0 2px 0 rgba(255,255,255,0.12),
+    0 0 60px rgba(255,140,56,0.35),
+    0 0 120px rgba(232,106,16,0.12);
 }
 .engine--idle:hover .engine__ticks {
   background: repeating-conic-gradient(
     from 0deg,
-    rgba(232,106,16,0.4) 0deg 1.2deg,
+    rgba(255,140,56,0.55) 0deg 1.2deg,
     transparent 1.2deg 10deg
   );
 }
@@ -185,7 +185,7 @@
   position: absolute;
   inset: 12%;
   border-radius: 50%;
-  border: 1.5px dashed rgba(232,106,16,0.2);
+  border: 1.5px dashed rgba(232,106,16,0.3);
   animation: spin 10s linear infinite;
   transition: border-color 0.6s;
 }
@@ -224,7 +224,7 @@
   position: absolute;
   inset: 26%;
   border-radius: 50%;
-  border: 1px solid rgba(232,106,16,0.12);
+  border: 1px solid rgba(232,106,16,0.18);
   animation: spin-rev 16s linear infinite;
   transition: border-color 0.6s;
 }

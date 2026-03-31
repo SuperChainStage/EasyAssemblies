@@ -79,11 +79,9 @@
   align-items: center;
   justify-content: flex-start;
   padding: 80px 24px 40px;
-  scrollbar-width: thin;
+  scrollbar-width: none;
 }
-.deploy__content::-webkit-scrollbar { width: 4px; }
-.deploy__content::-webkit-scrollbar-track { background: transparent; }
-.deploy__content::-webkit-scrollbar-thumb { background: rgba(232,106,16,0.15); border-radius: 2px; }
+.deploy__content::-webkit-scrollbar { width: 0; background: transparent; }
 
 /* ── Pipeline (centered) ── */
 .deploy__pipeline {
