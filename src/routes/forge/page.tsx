@@ -29,12 +29,10 @@ export default function ForgePage() {
     return undefined;
   }, [searchParams]);
 
-  // Redirect if no template
   useEffect(() => {
     if (!templateId || !getTemplate(templateId)) navigate('/', { replace: true });
   }, [templateId, navigate]);
 
-  // Load template files
   const [files, setFiles] = useState<Record<string, string>>({});
   const [selectedPath, setSelectedPath] = useState('');
 
@@ -56,7 +54,6 @@ export default function ForgePage() {
     return () => { cancelled = true; };
   }, [templateId, searchParams]);
 
-  // Build hook
   const {
     busy, logs, buildOk, compiled, packageId, txDigest,
     isPublishing, postDeployConfig,
@@ -68,8 +65,8 @@ export default function ForgePage() {
     [files],
   );
 
-  // Expert mode
-  const [expertOpen, setExpertOpen] = useState(false);
+  /* Expert / iOS code window */
+  const [codeOpen, setCodeOpen] = useState(false);
   const [showLogs, setShowLogs] = useState(true);
   const fileTree = useMemo(() => buildFileTree(Object.keys(files)), [files]);
 
@@ -77,7 +74,7 @@ export default function ForgePage() {
     if (selectedPath) setFiles(prev => ({ ...prev, [selectedPath]: value }));
   }, [selectedPath]);
 
-  // Engine chips
+  /* Engine chips */
   const engineChips: EngineChip[] = useMemo(() => {
     if (!activeConfig || !template?.chipConfig) return [];
     const enabledIds = (activeConfig.enabledChips ?? []) as string[];
@@ -88,7 +85,6 @@ export default function ForgePage() {
     }).filter(Boolean) as EngineChip[];
   }, [activeConfig, template]);
 
-  // Engine state machine
   const engineState: EngineState = useMemo(() => {
     if (busy) return 'forging';
     if (buildOk === false) return 'error';
@@ -96,19 +92,15 @@ export default function ForgePage() {
     return 'armed';
   }, [busy, buildOk]);
 
-  // After successful build, save artifacts & go to deploy
   const handleForge = useCallback(async () => {
     await onBuild();
   }, [onBuild]);
 
-  // Watch for build success → navigate to deploy
   useEffect(() => {
     if (buildOk === true && compiled) {
-      // Store compiled data in sessionStorage for deploy page
       sessionStorage.setItem('forge_compiled', JSON.stringify(compiled));
       sessionStorage.setItem('forge_template', templateId ?? '');
       sessionStorage.setItem('forge_config', searchParams.get('config') ?? '');
-      // Auto-navigate to deploy after short delay
       const t = setTimeout(() => navigate(`/deploy?template=${templateId}`), 1200);
       return () => clearTimeout(t);
     }
@@ -117,7 +109,6 @@ export default function ForgePage() {
   return (
     <div className="forge">
       <Navbar
-        stage="forge"
         left={
           <button type="button" className="ev-navbar__back-btn" onClick={() => navigate(-1 as unknown as string)}>
             ← Back
@@ -128,78 +119,120 @@ export default function ForgePage() {
       />
 
       <div className="forge__body">
-        {/* Engine visual */}
-        <div className="forge__engine-col">
-          <Engine state={engineState} chips={engineChips} size={340} />
+        {/* Central area — Engine OR iOS Code Window */}
+        <div className="forge__center">
+          {!codeOpen ? (
+            /* ── Engine View ── */
+            <div className="forge__engine-col">
+              <Engine state={engineState} chips={engineChips} size={320} />
 
-          <div className="forge__status-text">
-            {busy ? 'Compiling modules…' :
-             buildOk === true ? 'Forge complete — deploying…' :
-             buildOk === false ? 'Compilation failed' :
-             `${engineChips.length} chip${engineChips.length !== 1 ? 's' : ''} loaded — ready to forge`}
-          </div>
-
-          <div className="forge__actions">
-            <button
-              type="button"
-              className="forge__btn forge__btn--forge"
-              disabled={!buildReady || busy || buildOk === true}
-              onClick={handleForge}
-            >
-              {busy ? '⏳ Forging…' : buildOk === true ? '✓ Done' : '⚒ Forge Engine'}
-            </button>
-          </div>
-
-          {/* Expert mode toggle */}
-          <button
-            type="button"
-            className="forge__expert-toggle"
-            onClick={() => setExpertOpen(!expertOpen)}
-          >
-            {expertOpen ? '▾ Hide Source Code' : '▸ Expert Mode — View Source'}
-          </button>
-        </div>
-
-        {/* Expert panel */}
-        {expertOpen && (
-          <div className="forge__expert">
-            <aside className="forge__sidebar">
-              <div className="forge__sidebar-header">Explorer</div>
-              <div className="forge__sidebar-tree">
-                <FileTree tree={fileTree} selectedPath={selectedPath} onSelect={setSelectedPath} />
+              <div className="forge__status-text">
+                {busy ? 'Compiling modules…' :
+                 buildOk === true ? 'Forge complete — deploying…' :
+                 buildOk === false ? 'Compilation failed' :
+                 `${engineChips.length} chip${engineChips.length !== 1 ? 's' : ''} loaded — ready to forge`}
               </div>
 
-              {/* Chip summary */}
-              {template?.chipConfig && activeConfig && (
-                <ForgeChipSummary chipConfig={template.chipConfig} values={activeConfig} />
-              )}
-              {template?.configFields && activeConfig && !template?.chipConfig && (
-                <ForgeConfigSummary fields={template.configFields} values={activeConfig} />
-              )}
-            </aside>
-
-            <div className="forge__code-area">
-              <div className="forge__editor">
-                {selectedPath ? (
-                  <CodeEditor
-                    value={files[selectedPath] ?? ''}
-                    path={selectedPath}
-                    onChange={handleEditorChange}
-                    readOnly={busy || isPublishing}
-                  />
-                ) : (
-                  <div className="forge__editor-placeholder">Select a file to edit</div>
-                )}
+              <div className="forge__actions">
+                <button type="button" className="forge__btn forge__btn--back" onClick={() => navigate(-1 as unknown as string)}>
+                  ← Back
+                </button>
+                <button
+                  type="button"
+                  className="forge__btn forge__btn--forge"
+                  disabled={!buildReady || busy || buildOk === true}
+                  onClick={handleForge}
+                >
+                  {busy ? '⏳ Forging…' : buildOk === true ? '✓ Done' : '⚒ Forge Engine'}
+                </button>
               </div>
-              <Console
-                isOpen={showLogs}
-                onToggle={() => setShowLogs(!showLogs)}
-                logs={logs}
-                explorerBaseUrl={explorerBaseUrl}
-              />
+
+              <button
+                type="button"
+                className="forge__expert-toggle"
+                onClick={() => setCodeOpen(true)}
+              >
+                ▸ Expert Mode — View Source Code
+              </button>
             </div>
-          </div>
-        )}
+          ) : (
+            /* ── iOS-style Code Window (replaces engine) ── */
+            <div className="forge__ios-window">
+              {/* Title Bar */}
+              <div className="forge__ios-titlebar">
+                <div className="forge__ios-dots">
+                  <span className="forge__ios-dot forge__ios-dot--red" onClick={() => setCodeOpen(false)} />
+                  <span className="forge__ios-dot forge__ios-dot--yellow" />
+                  <span className="forge__ios-dot forge__ios-dot--green" />
+                </div>
+                <span className="forge__ios-filename">
+                  {selectedPath || 'No file selected'}
+                </span>
+                <button
+                  type="button"
+                  className="forge__ios-close"
+                  onClick={() => setCodeOpen(false)}
+                  title="Close code editor"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Window Body */}
+              <div className="forge__ios-body">
+                <aside className="forge__ios-sidebar">
+                  <div className="forge__ios-sidebar-header">EXPLORER</div>
+                  <div className="forge__ios-sidebar-tree">
+                    <FileTree tree={fileTree} selectedPath={selectedPath} onSelect={setSelectedPath} />
+                  </div>
+
+                  {template?.chipConfig && activeConfig && (
+                    <ForgeChipSummary chipConfig={template.chipConfig} values={activeConfig} />
+                  )}
+                  {template?.configFields && activeConfig && !template?.chipConfig && (
+                    <ForgeConfigSummary fields={template.configFields} values={activeConfig} />
+                  )}
+                </aside>
+
+                <div className="forge__ios-code-area">
+                  <div className="forge__ios-editor">
+                    {selectedPath ? (
+                      <CodeEditor
+                        value={files[selectedPath] ?? ''}
+                        path={selectedPath}
+                        onChange={handleEditorChange}
+                        readOnly={busy || isPublishing}
+                      />
+                    ) : (
+                      <div className="forge__ios-editor-placeholder">Select a file to edit</div>
+                    )}
+                  </div>
+                  <Console
+                    isOpen={showLogs}
+                    onToggle={() => setShowLogs(!showLogs)}
+                    logs={logs}
+                    explorerBaseUrl={explorerBaseUrl}
+                  />
+                </div>
+              </div>
+
+              {/* Bottom Action Bar */}
+              <div className="forge__ios-bottombar">
+                <button type="button" className="forge__btn forge__btn--back" onClick={() => setCodeOpen(false)}>
+                  ← Engine View
+                </button>
+                <button
+                  type="button"
+                  className="forge__btn forge__btn--forge"
+                  disabled={!buildReady || busy || buildOk === true}
+                  onClick={handleForge}
+                >
+                  {busy ? '⏳ Forging…' : buildOk === true ? '✓ Done' : '⚒ Forge Engine'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <StatusBar

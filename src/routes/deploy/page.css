@@ -16,6 +16,7 @@
   display: flex;
   gap: 0;
   overflow: hidden;
+  padding-top: var(--navbar-h);
 }
 
 /* ── Pipeline (left 55%) ── */

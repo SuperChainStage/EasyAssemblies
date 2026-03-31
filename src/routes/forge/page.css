@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   Forge Page — Engine Build Pipeline
+   Forge Page — Engine + iOS-style Code Window
    ═══════════════════════════════════════════════════════════════ */
 
 .forge {
@@ -16,6 +16,15 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  padding-top: var(--navbar-h);
+}
+
+.forge__center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 /* ── Engine Column ── */
@@ -24,8 +33,8 @@
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  padding: 32px 24px 16px;
-  flex-shrink: 0;
+  padding: 24px;
+  animation: fade-in-up 0.4s var(--ease-out-expo) both;
 }
 
 .forge__status-text {
@@ -44,14 +53,24 @@
 }
 
 .forge__btn {
-  padding: 12px 32px;
+  padding: 12px 28px;
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
   letter-spacing: 1px;
   font-family: var(--font-display);
+}
+
+.forge__btn--back {
+  background: transparent;
+  border: 1px solid var(--border-dim);
+  color: var(--text-secondary);
+}
+.forge__btn--back:hover {
+  border-color: var(--eve-orange);
+  color: var(--eve-orange-light);
 }
 
 .forge__btn--forge {
@@ -70,7 +89,7 @@
   cursor: not-allowed;
 }
 
-/* Expert mode toggle */
+/* Expert mode toggle link */
 .forge__expert-toggle {
   background: none;
   border: none;
@@ -87,53 +106,134 @@
   background: rgba(232,106,16,0.06);
 }
 
-/* ── Expert Panel ── */
-.forge__expert {
-  flex: 1;
-  display: flex;
-  border-top: 1px solid var(--border-dim);
-  overflow: hidden;
-  animation: fade-in-up 0.3s var(--ease-out-expo);
-}
-
-.forge__sidebar {
-  width: var(--sidebar-w);
-  border-right: 1px solid var(--border-dim);
+/* ═══════════════════════════════════════════════════════════════
+   iOS / macOS-style Code Window
+   ═══════════════════════════════════════════════════════════════ */
+.forge__ios-window {
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
+  width: 95%;
+  max-width: 1100px;
+  height: calc(100% - 32px);
+  margin: 16px auto;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(13,15,20,0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.5),
+    0 0 1px rgba(232,106,16,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+  overflow: hidden;
+  animation: fade-in-up 0.35s var(--ease-out-expo) both;
+}
+
+/* Title bar with traffic-light dots */
+.forge__ios-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  height: 38px;
+  background: rgba(20,22,30,0.9);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+}
+
+.forge__ios-dots {
+  display: flex;
+  gap: 7px;
+  -webkit-app-region: no-drag;
+}
+
+.forge__ios-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.forge__ios-dot:hover {
+  filter: brightness(1.3);
+}
+.forge__ios-dot--red    { background: #FF5F56; }
+.forge__ios-dot--yellow { background: #FFBD2E; }
+.forge__ios-dot--green  { background: #27C93F; }
+
+.forge__ios-filename {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.forge__ios-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  -webkit-app-region: no-drag;
+}
+.forge__ios-close:hover {
+  color: var(--eve-orange-light);
+  background: rgba(232,106,16,0.08);
+}
+
+/* Window body — sidebar + code */
+.forge__ios-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.forge__ios-sidebar {
+  width: 200px;
+  border-right: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  flex-direction: column;
+  background: rgba(15,17,23,0.8);
   flex-shrink: 0;
 }
 
-.forge__sidebar-header {
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border-dim);
-  color: var(--text-secondary);
-  font-size: 10px;
+.forge__ios-sidebar-header {
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: var(--text-muted);
+  font-size: 9px;
   font-family: var(--font-display);
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 2px;
 }
 
-.forge__sidebar-tree {
+.forge__ios-sidebar-tree {
   flex: 1;
   overflow: auto;
 }
 
-.forge__code-area {
+.forge__ios-code-area {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.forge__editor {
+.forge__ios-editor {
   flex: 1;
   background: var(--bg-inset);
   overflow: hidden;
 }
 
-.forge__editor-placeholder {
+.forge__ios-editor-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -142,9 +242,20 @@
   font-size: 14px;
 }
 
+/* Bottom bar inside iOS window */
+.forge__ios-bottombar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: rgba(20,22,30,0.9);
+  flex-shrink: 0;
+}
+
 /* ── Chip Summary in sidebar ── */
 .forge__chip-summary {
-  border-top: 1px solid var(--border-dim);
+  border-top: 1px solid rgba(255,255,255,0.04);
   padding: 10px 14px;
   display: flex;
   flex-direction: column;

@@ -19,6 +19,7 @@ const COMPONENT_GROUPS: {
   title: string;
   subtitle: string;
   desc: string;
+  color: string;
   templates: AssemblyTemplate[];
 }[] = [
   {
@@ -26,7 +27,8 @@ const COMPONENT_GROUPS: {
     icon: '⬡',
     title: 'SMART GATE',
     subtitle: '星门控制器',
-    desc: 'Control jump gate access — tribe permits, toll fees, bounty checks',
+    desc: 'Control jump gate access with tribe permits, toll fees, and bounty checks',
+    color: '#45AAF2',
     templates: GATE_TEMPLATES,
   },
   {
@@ -34,7 +36,8 @@ const COMPONENT_GROUPS: {
     icon: '⬢',
     title: 'STORAGE UNIT',
     subtitle: '空间存储单元',
-    desc: 'Programmable storage — vending, swap, airdrop, gated access',
+    desc: 'Programmable storage for vending, swap, airdrop, and gated access',
+    color: '#2BCBBA',
     templates: SSU_TEMPLATES,
   },
   {
@@ -42,21 +45,17 @@ const COMPONENT_GROUPS: {
     icon: '◎',
     title: 'TURRET',
     subtitle: '防御炮塔系统',
-    desc: 'Automated defense — target selection, threat response',
+    desc: 'Automated defense with target selection and threat response',
+    color: '#FF6348',
     templates: TURRET_TEMPLATES,
   },
 ];
 
-/* ── Chip category → color mapping ── */
-const CATEGORY_COLORS: Record<string, string> = {
-  exclude: '#FF4757', access: '#26DE81', weight: '#45AAF2',
-  payment: '#FFC312', revenue: '#A55EEA', item: '#FF6348',
-  config: '#778CA3', pricing: '#2BCBBA', stock: '#0ABDE3',
-  swap: '#FD79A8', airdrop: '#A3CB38',
-};
-
 export default function IndexPage() {
   const navigate = useNavigate();
+
+  /* Two-level card state */
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
   /* Modal targets */
   const [configTarget, setConfigTarget] = useState<AssemblyTemplate | null>(null);
@@ -81,6 +80,8 @@ export default function IndexPage() {
   }, [chipResult, selectedTemplate]);
 
   const engineState: EngineState = engineChips.length > 0 || configResult ? 'armed' : 'idle';
+  const isConfigured = !!selectedTemplate;
+  const activeGroup = COMPONENT_GROUPS.find(g => g.key === selectedGroup);
 
   /* Handlers */
   const handleTemplateClick = useCallback((tpl: AssemblyTemplate) => {
@@ -99,6 +100,7 @@ export default function IndexPage() {
     setChipResult(result);
     setConfigResult(null);
     setChipTarget(null);
+    setSelectedGroup(null);
   }, [chipTarget]);
 
   const handleConfigSubmit = useCallback((values: Record<string, unknown>) => {
@@ -107,12 +109,14 @@ export default function IndexPage() {
     setConfigResult(values);
     setChipResult(null);
     setConfigTarget(null);
+    setSelectedGroup(null);
   }, [configTarget]);
 
   const handleReset = useCallback(() => {
     setSelectedTemplate(null);
     setChipResult(null);
     setConfigResult(null);
+    setSelectedGroup(null);
   }, []);
 
   const handleForge = useCallback(() => {
@@ -126,13 +130,11 @@ export default function IndexPage() {
     navigate(`/forge?${params.toString()}`);
   }, [selectedTemplate, chipResult, configResult, navigate]);
 
-  const isConfigured = !!selectedTemplate;
-
   return (
     <div className="home">
-      <Navbar stage="config" />
+      <Navbar />
 
-      {/* Chip selector modal */}
+      {/* Modals */}
       {chipTarget?.chipConfig && (
         <ChipSelector
           title={chipTarget.label}
@@ -156,56 +158,77 @@ export default function IndexPage() {
       <div className="home__body">
         {/* ── Left: Engine ── */}
         <div className="home__engine-area">
-          <Engine state={engineState} chips={engineChips} size={380} />
+          <Engine state={engineState} chips={engineChips} size={400} />
           <p className="home__engine-hint">
-            {isConfigured ? `${engineChips.length || '✓'} chip${engineChips.length !== 1 ? 's' : ''} loaded` : 'Select a component to begin'}
+            {isConfigured
+              ? `${engineChips.length || '✓'} chip${engineChips.length !== 1 ? 's' : ''} loaded`
+              : 'Select a component to begin'}
           </p>
         </div>
 
-        {/* ── Right: Cards or Summary ── */}
+        {/* ── Right: Cards ── */}
         <div className="home__right">
           {!isConfigured ? (
-            /* Component selection cards */
-            <div className="home__cards">
-              {COMPONENT_GROUPS.map((g, i) => (
-                <div
-                  key={g.key}
-                  className={`comp-card comp-card--${g.key}`}
-                  style={{ animationDelay: `${i * 0.12}s` }}
-                >
-                  {/* Sheen overlay */}
-                  <div className="comp-card__sheen" />
-
-                  <div className="comp-card__header">
-                    <span className="comp-card__icon">{g.icon}</span>
-                    <div>
-                      <h2 className="comp-card__title">{g.title}</h2>
-                      <p className="comp-card__subtitle">{g.subtitle}</p>
+            !selectedGroup ? (
+              /* ─── Level 1: Component Selection ─── */
+              <div className="home__cards">
+                {COMPONENT_GROUPS.map((g, i) => (
+                  <button
+                    key={g.key}
+                    type="button"
+                    className={`glass-card glass-card--${g.key}`}
+                    style={{ '--gc': g.color, animationDelay: `${i * 0.1}s` } as React.CSSProperties}
+                    onClick={() => setSelectedGroup(g.key)}
+                  >
+                    <div className="glass-card__sheen" />
+                    <span className="glass-card__icon">{g.icon}</span>
+                    <div className="glass-card__text">
+                      <h2 className="glass-card__title">{g.title}</h2>
+                      <p className="glass-card__subtitle">{g.subtitle}</p>
                     </div>
-                    <span className="comp-card__count">{g.templates.length}</span>
-                  </div>
-
-                  <p className="comp-card__desc">{g.desc}</p>
-
-                  <div className="comp-card__templates">
-                    {g.templates.map(tpl => (
-                      <button
-                        key={tpl.id}
-                        type="button"
-                        className="comp-card__tpl-btn"
-                        onClick={() => handleTemplateClick(tpl)}
-                      >
-                        <span>{tpl.label}</span>
-                        <span className="comp-card__tpl-arrow">→</span>
-                      </button>
-                    ))}
-                  </div>
+                    <span className="glass-card__count">{g.templates.length}</span>
+                    <span className="glass-card__arrow">›</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              /* ─── Level 2: Template Selection ─── */
+              <div className="home__templates" style={{ '--gc': activeGroup?.color } as React.CSSProperties}>
+                <button
+                  type="button"
+                  className="home__templates-back"
+                  onClick={() => setSelectedGroup(null)}
+                >
+                  ← Back
+                </button>
+                <div className="home__templates-header">
+                  <span className="home__templates-icon">{activeGroup?.icon}</span>
+                  <h2 className="home__templates-title">{activeGroup?.title}</h2>
                 </div>
-              ))}
-            </div>
+                <p className="home__templates-desc">{activeGroup?.desc}</p>
+                <div className="home__templates-list">
+                  {activeGroup?.templates.map((tpl, i) => (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      className="tpl-card"
+                      style={{ animationDelay: `${i * 0.06}s` }}
+                      onClick={() => handleTemplateClick(tpl)}
+                    >
+                      <div className="tpl-card__sheen" />
+                      <span className="tpl-card__label">{tpl.label}</span>
+                      <span className="tpl-card__desc">{tpl.description}</span>
+                      <span className="tpl-card__cta">
+                        {tpl.chipConfig ? 'Configure chips →' : 'Select →'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
           ) : (
-            /* Capability summary */
-            <div className="cap-summary" style={{ animation: 'fade-in-up 0.5s var(--ease-out-expo) both' }}>
+            /* ─── Capability Summary ─── */
+            <div className="cap-summary">
               <div className="cap-summary__sheen" />
               <h3 className="cap-summary__title">ENGINE CONFIGURATION</h3>
               <div className="cap-summary__divider" />
@@ -227,7 +250,6 @@ export default function IndexPage() {
                 )}
               </div>
 
-              {/* Active chips */}
               {engineChips.length > 0 && (
                 <>
                   <div className="cap-summary__section-label">Active Chips</div>

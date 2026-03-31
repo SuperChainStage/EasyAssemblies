@@ -3,16 +3,16 @@ import {
   type DeploymentTargetId,
 } from '@/config/constants';
 import { useSuiClientContext } from '@mysten/dapp-kit';
+import logoSvg from '@/assets/logo.svg';
 import './Navbar.css';
 
 export interface NavbarProps {
   left?: React.ReactNode;
   title?: string;
   badge?: string;
-  stage?: 'config' | 'forge' | 'deploy';
 }
 
-export function Navbar({ left, title, badge, stage }: NavbarProps) {
+export function Navbar({ left, title, badge }: NavbarProps) {
   const { network, selectNetwork } = useSuiClientContext();
 
   const handleNetworkChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -29,23 +29,12 @@ export function Navbar({ left, title, badge, stage }: NavbarProps) {
         <div className="ev-navbar__left">
           {left}
           <span className="ev-navbar__brand">
-            <span className="ev-navbar__brand-icon">⬡</span>
+            <img src={logoSvg} alt="" className="ev-navbar__logo" />
             EasyAssemblies
           </span>
           {title && <span className="ev-navbar__title">{title}</span>}
           {badge && <span className="ev-navbar__badge">{badge}</span>}
         </div>
-
-        {/* Stage indicator */}
-        {stage && (
-          <div className="ev-navbar__stages">
-            <span className={`ev-navbar__stage-dot ${stage === 'config' ? 'active' : ''}`}>CONFIG</span>
-            <span className="ev-navbar__stage-line" />
-            <span className={`ev-navbar__stage-dot ${stage === 'forge' ? 'active' : ''}`}>FORGE</span>
-            <span className="ev-navbar__stage-line" />
-            <span className={`ev-navbar__stage-dot ${stage === 'deploy' ? 'active' : ''}`}>DEPLOY</span>
-          </div>
-        )}
 
         <div className="ev-navbar__right">
           <select

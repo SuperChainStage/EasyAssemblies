@@ -89,7 +89,6 @@ export default function DeployPage() {
   return (
     <div className="deploy">
       <Navbar
-        stage="deploy"
         left={
           <button type="button" className="ev-navbar__back-btn" onClick={() => navigate(-1 as unknown as string)}>
             ← Back

@@ -33,6 +33,17 @@ export function chipColor(category: string): string {
   return CATEGORY_COLORS[category] ?? '#778CA3';
 }
 
+/* Converge particle config — 16 particles from edges */
+const CONVERGE_COUNT = 16;
+const convergeParticles = Array.from({ length: CONVERGE_COUNT }, (_, i) => {
+  const angle = (360 / CONVERGE_COUNT) * i;
+  const dist = 1.0 + seeded(i, 99) * 0.4; // 1.0–1.4x engine radius
+  const delay = seeded(i, 42) * 1.8;
+  const dur = 1.2 + seeded(i, 77) * 0.8;
+  const brightness = 0.5 + seeded(i, 33) * 0.5;
+  return { angle, dist, delay, dur, brightness };
+});
+
 export function Engine({ state, chips = [], size = 380, className = '' }: EngineProps) {
   const slotCount = Math.max(chips.length, 6);
   const maxSlots = Math.min(slotCount, 8);
@@ -45,7 +56,7 @@ export function Engine({ state, chips = [], size = 380, className = '' }: Engine
     return arr;
   }, [chips, maxSlots]);
 
-  const orbitCount = state === 'forging' ? 10 : state === 'armed' ? 6 : 3;
+  const orbitCount = state === 'forging' ? 10 : state === 'armed' ? 6 : 4;
   const orbitDuration = state === 'forging' ? 2 : state === 'armed' ? 5 : 8;
 
   const driftParticles = useMemo(() => {
@@ -78,6 +89,23 @@ export function Engine({ state, chips = [], size = 380, className = '' }: Engine
       className={`engine engine--${state} ${className}`}
       style={{ '--engine-size': `${size}px` } as React.CSSProperties}
     >
+      {/* Converge particles (visible on hover via CSS) */}
+      <div className="engine__converge-layer" aria-hidden="true">
+        {convergeParticles.map((p, i) => (
+          <span
+            key={`cvg-${i}`}
+            className="engine__converge-dot"
+            style={{
+              '--cvg-angle': `${p.angle}deg`,
+              '--cvg-dist': `${p.dist}`,
+              '--cvg-delay': `${p.delay}s`,
+              '--cvg-dur': `${p.dur}s`,
+              '--cvg-bright': `${p.brightness}`,
+            } as React.CSSProperties}
+          />
+        ))}
+      </div>
+
       {/* Ambient background glow */}
       <div className="engine__ambient" />
 
