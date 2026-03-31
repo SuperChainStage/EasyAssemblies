@@ -6,7 +6,10 @@ export default defineConfig({
       root: 'docs',
       html: './', 
     },
-    assetPrefix: './',
+    assetPrefix: '/EasyAssemblies/',
+  },
+  server: {
+    baseUrl: '/EasyAssemblies/',
   },
   html: {
     outputStructure: 'flat',
