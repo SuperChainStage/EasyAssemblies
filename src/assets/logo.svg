@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <!-- Ultra-premium sleek minimalist background gradient -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14161C"/>
+      <stop offset="100%" stop-color="#08090C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Deep Space Canvas Badge (Expanded to touch the edges exactly, 0 margin) -->
+  <circle cx="128" cy="128" r="128" fill="url(#bg)" />
+  <circle cx="128" cy="128" r="127" fill="none" stroke="#1C1E26" stroke-width="2" />
+
+  <!-- The Assembly 'Node' (Magnetic Exploded Isometric Box) -->
+  <!-- Removed the drop-shadow filter to ensure 100% compatibility across all PNG renderers -->
+  <g transform="translate(128, 128)" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round">
+    
+    <!-- Top Canopy (Full bright, representing the top logic/assembly layer) -->
+    <path d="M 0,-8 L 55.43,-40 L 0,-72 L -55.43,-40 Z" fill="#FFFFFF" opacity="1.0" />
+
+    <!-- Left Wing (Mid translucency, structural wall) -->
+    <path d="M -6.93,4 L -62.36,-28 L -62.36,36 L -6.93,68 Z" fill="#FFFFFF" opacity="0.45" />
+
+    <!-- Right Base (Lowest translucency, foundation) -->
+    <path d="M 6.93,4 L 62.36,-28 L 62.36,36 L 6.93,68 Z" fill="#FFFFFF" opacity="0.15" />
+
+    <!-- The Magnetic Core / Protocol Chip -->
+    <circle cx="0" cy="0" r="4.5" fill="#FFFFFF" stroke="none" opacity="0.9" />
+  </g>
+</svg>
