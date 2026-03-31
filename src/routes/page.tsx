@@ -1,15 +1,15 @@
 import { useNavigate } from '@modern-js/runtime/router';
 import { useState, useMemo, useCallback } from 'react';
 import { GATE_TEMPLATES, SSU_TEMPLATES, TURRET_TEMPLATES } from '@/templates';
-import type { AssemblyTemplate, ChipTemplateConfig } from '@/templates/types';
+import type { AssemblyTemplate } from '@/templates/types';
 import type { Chip } from '@/templates/chip-types';
 import { ConfigForm } from '@/components/ConfigForm';
 import { ChipSelector } from '@/components/ChipSelector';
 import type { ChipSelectorResult } from '@/components/ChipSelector';
-import { Navbar } from '@/components/Navbar';
 import { StatusBar } from '@/components/StatusBar';
 import { Engine, chipColor } from '@/components/Engine';
 import type { EngineChip, EngineState } from '@/components/Engine';
+import logoSvg from '@/assets/logo.svg';
 import './page.css';
 
 /* ── Component Group Definitions ── */
@@ -26,7 +26,7 @@ const COMPONENT_GROUPS: {
     key: 'gate',
     icon: '⬡',
     title: 'SMART GATE',
-    subtitle: '星门控制器',
+    subtitle: 'Access Control',
     desc: 'Control jump gate access with tribe permits, toll fees, and bounty checks',
     color: '#45AAF2',
     templates: GATE_TEMPLATES,
@@ -35,7 +35,7 @@ const COMPONENT_GROUPS: {
     key: 'ssu',
     icon: '⬢',
     title: 'STORAGE UNIT',
-    subtitle: '空间存储单元',
+    subtitle: 'Programmable Storage',
     desc: 'Programmable storage for vending, swap, airdrop, and gated access',
     color: '#2BCBBA',
     templates: SSU_TEMPLATES,
@@ -44,7 +44,7 @@ const COMPONENT_GROUPS: {
     key: 'turret',
     icon: '◎',
     title: 'TURRET',
-    subtitle: '防御炮塔系统',
+    subtitle: 'Auto Defense',
     desc: 'Automated defense with target selection and threat response',
     color: '#FF6348',
     templates: TURRET_TEMPLATES,
@@ -132,8 +132,6 @@ export default function IndexPage() {
 
   return (
     <div className="home">
-      <Navbar />
-
       {/* Modals */}
       {chipTarget?.chipConfig && (
         <ChipSelector
@@ -155,10 +153,20 @@ export default function IndexPage() {
         />
       )}
 
+      {/* ── Centered Header ── */}
+      <header className="home__header">
+        <div className="home__brand">
+          <img src={logoSvg} alt="EasyAssemblies" className="home__logo" />
+          <h1 className="home__title">EasyAssemblies</h1>
+        </div>
+        <p className="home__tagline">Build powerful EVE Frontier Smart Assemblies like building blocks</p>
+      </header>
+
+      {/* ── Main Content ── */}
       <div className="home__body">
-        {/* ── Left: Engine ── */}
+        {/* Left: Engine (2/3) */}
         <div className="home__engine-area">
-          <Engine state={engineState} chips={engineChips} size={400} />
+          <Engine state={engineState} chips={engineChips} size={460} />
           <p className="home__engine-hint">
             {isConfigured
               ? `${engineChips.length || '✓'} chip${engineChips.length !== 1 ? 's' : ''} loaded`
@@ -166,7 +174,7 @@ export default function IndexPage() {
           </p>
         </div>
 
-        {/* ── Right: Cards ── */}
+        {/* Right: Cards (1/3) */}
         <div className="home__right">
           {!isConfigured ? (
             !selectedGroup ? (

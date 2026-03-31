@@ -3,9 +3,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { ConnectModal, useCurrentAccount } from '@mysten/dapp-kit';
 import { getTemplate } from '@/templates';
 import { useMoveBuilder } from '@/hooks/useMoveBuilder';
-import { Navbar } from '@/components/Navbar';
 import { StatusBar } from '@/components/StatusBar';
-import { Console } from '@/components/Console';
 import { AuthorizePanel } from '@/components/AuthorizePanel';
 import { useNetworkVariable } from '@/config/dapp-kit';
 import './page.css';
@@ -21,7 +19,6 @@ export default function DeployPage() {
 
   const template = templateId ? getTemplate(templateId) : undefined;
 
-  // Redirect if no template
   useEffect(() => {
     if (!templateId || !getTemplate(templateId)) navigate('/', { replace: true });
   }, [templateId, navigate]);
@@ -52,7 +49,6 @@ export default function DeployPage() {
     return () => { cancelled = true; };
   }, [templateId]);
 
-  // Build hook (reuse — it will re-build internally if needed)
   const {
     busy, logs, buildOk, compiled,
     packageId, txDigest, isPublishing,
@@ -60,8 +56,6 @@ export default function DeployPage() {
     onBuild, onDeploy,
     onRetryPostDeployConfig, onRefreshPostDeployConfig,
   } = useMoveBuilder(files, { templateId, config: activeConfig });
-
-  const [showLogs, setShowLogs] = useState(true);
 
   // Stage tracking
   const stage: DeployStage = useMemo(() => {
@@ -88,18 +82,20 @@ export default function DeployPage() {
 
   return (
     <div className="deploy">
-      <Navbar
-        left={
-          <button type="button" className="ev-navbar__back-btn" onClick={() => navigate(-1 as unknown as string)}>
-            ← Back
-          </button>
-        }
-        title="Deploy"
-        badge={template?.label}
-      />
+      {/* ── Custom Header ── */}
+      <header className="deploy__header">
+        <button type="button" className="deploy__back" onClick={() => navigate(-1 as unknown as string)}>
+          ← Back to Forge
+        </button>
+        <div className="deploy__header-center">
+          <h1 className="deploy__page-title">DEPLOYMENT</h1>
+          <p className="deploy__page-desc">{template?.label ?? 'Smart Assembly'}</p>
+        </div>
+        <div className="deploy__header-right" />
+      </header>
 
-      <div className="deploy__body">
-        {/* ── Pipeline Timeline ── */}
+      {/* ── Pipeline (centered, scrollable) ── */}
+      <div className="deploy__content">
         <div className="deploy__pipeline">
           {/* Step 1: Connect */}
           <div className={`deploy__step ${stage === 'connect' ? 'active' : account ? 'done' : ''}`}>
@@ -172,20 +168,19 @@ export default function DeployPage() {
           </div>
         </div>
 
-        {/* ── Logs Panel ── */}
-        <div className="deploy__logs-area">
-          <Console
-            isOpen={showLogs}
-            onToggle={() => setShowLogs(!showLogs)}
-            logs={logs}
-            packageId={packageId ?? undefined}
-            txDigest={txDigest ?? undefined}
-            postDeployConfig={postDeployConfig}
-            onRetryPostDeployConfig={onRetryPostDeployConfig}
-            onRefreshPostDeployConfig={onRefreshPostDeployConfig}
-            explorerBaseUrl={explorerBaseUrl}
-          />
-        </div>
+        {/* Build log summary (collapsible) */}
+        {logs.length > 0 && (
+          <details className="deploy__logs-details">
+            <summary className="deploy__logs-summary">Build Log ({logs.length} entries)</summary>
+            <div className="deploy__logs-content">
+              {logs.map((l, i) => (
+                <div key={i} className="deploy__log-line">
+                  {l}
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
       </div>
 
       <StatusBar

@@ -351,7 +351,7 @@ export function ChipSelector({
               Cancel
             </button>
             <button type="button" className="chip-btn-submit" onClick={handleSubmit}>
-              Generate &amp; Open Playground
+              Confirm Selection
             </button>
           </div>
         </div>

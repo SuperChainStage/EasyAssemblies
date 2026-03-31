@@ -1,18 +1,23 @@
 import { useNavigate, useSearchParams } from '@modern-js/runtime/router';
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { getTemplate } from '@/templates';
 import type { ConfigField, ChipTemplateConfig } from '@/templates/types';
 import type { Chip } from '@/templates/chip-types';
 import { useMoveBuilder } from '@/hooks/useMoveBuilder';
 import { Engine, chipColor } from '@/components/Engine';
 import type { EngineChip, EngineState } from '@/components/Engine';
-import { Navbar } from '@/components/Navbar';
 import { StatusBar } from '@/components/StatusBar';
 import { FileTree, buildFileTree } from '@/components/FileTree';
 import { CodeEditor } from '@/components/CodeEditor';
 import { Console } from '@/components/Console';
 import { useNetworkVariable } from '@/config/dapp-kit';
 import './page.css';
+
+/* ── Resize clamp constants ── */
+const SIDEBAR_MIN = 140;
+const SIDEBAR_MAX = 380;
+const CONSOLE_MIN = 60;
+const CONSOLE_MAX = 400;
 
 export default function ForgePage() {
   const navigate = useNavigate();
@@ -96,27 +101,59 @@ export default function ForgePage() {
     await onBuild();
   }, [onBuild]);
 
+  /* Save compiled data but do NOT auto-navigate */
   useEffect(() => {
     if (buildOk === true && compiled) {
       sessionStorage.setItem('forge_compiled', JSON.stringify(compiled));
       sessionStorage.setItem('forge_template', templateId ?? '');
       sessionStorage.setItem('forge_config', searchParams.get('config') ?? '');
-      const t = setTimeout(() => navigate(`/deploy?template=${templateId}`), 1200);
-      return () => clearTimeout(t);
     }
-  }, [buildOk, compiled, templateId, searchParams, navigate]);
+  }, [buildOk, compiled, templateId, searchParams]);
+
+  const handleDeploy = useCallback(() => {
+    navigate(`/deploy?template=${templateId}`);
+  }, [navigate, templateId]);
+
+  /* ── Drag-resize sidebar ── */
+  const [sidebarW, setSidebarW] = useState(200);
+  const [consoleH, setConsoleH] = useState(140);
+  const dragRef = useRef<{ kind: 'sidebar' | 'console'; start: number; startVal: number } | null>(null);
+
+  const onDragStart = useCallback((kind: 'sidebar' | 'console', e: React.MouseEvent) => {
+    e.preventDefault();
+    const start = kind === 'sidebar' ? e.clientX : e.clientY;
+    const startVal = kind === 'sidebar' ? sidebarW : consoleH;
+    dragRef.current = { kind, start, startVal };
+    const onMove = (ev: MouseEvent) => {
+      if (!dragRef.current) return;
+      if (dragRef.current.kind === 'sidebar') {
+        const delta = ev.clientX - dragRef.current.start;
+        setSidebarW(Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, dragRef.current.startVal + delta)));
+      } else {
+        const delta = dragRef.current.start - ev.clientY;
+        setConsoleH(Math.min(CONSOLE_MAX, Math.max(CONSOLE_MIN, dragRef.current.startVal + delta)));
+      }
+    };
+    const onUp = () => {
+      dragRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [sidebarW, consoleH]);
+
+  /* Chip label list */
+  const chipSummaryText = engineChips.map(c => c.id).join(', ') || (activeConfig ? 'Custom config' : '—');
 
   return (
     <div className="forge">
-      <Navbar
-        left={
-          <button type="button" className="ev-navbar__back-btn" onClick={() => navigate(-1 as unknown as string)}>
-            ← Back
-          </button>
-        }
-        title="Assembly Forge"
-        badge={template?.label}
-      />
+      {/* ── Custom Header (no Navbar) ── */}
+      <header className="forge__header">
+        <button type="button" className="forge__back" onClick={() => navigate(-1 as unknown as string)}>
+          ← Back
+        </button>
+      </header>
 
       <div className="forge__body">
         {/* Central area — Engine OR iOS Code Window */}
@@ -124,27 +161,38 @@ export default function ForgePage() {
           {!codeOpen ? (
             /* ── Engine View ── */
             <div className="forge__engine-col">
-              <Engine state={engineState} chips={engineChips} size={320} />
+              <h2 className="forge__page-title">ASSEMBLY FORGE</h2>
+              <p className="forge__page-desc">Compile and forge your Smart Assembly engine</p>
+
+              <Engine state={engineState} chips={engineChips} size={300} />
+
+              <div className="forge__chip-list">
+                <span className="forge__chip-list-label">Chips:</span>
+                <span className="forge__chip-list-value">{chipSummaryText}</span>
+              </div>
 
               <div className="forge__status-text">
                 {busy ? 'Compiling modules…' :
-                 buildOk === true ? 'Forge complete — deploying…' :
+                 buildOk === true ? 'Forge complete ✓' :
                  buildOk === false ? 'Compilation failed' :
                  `${engineChips.length} chip${engineChips.length !== 1 ? 's' : ''} loaded — ready to forge`}
               </div>
 
               <div className="forge__actions">
-                <button type="button" className="forge__btn forge__btn--back" onClick={() => navigate(-1 as unknown as string)}>
-                  ← Back
-                </button>
-                <button
-                  type="button"
-                  className="forge__btn forge__btn--forge"
-                  disabled={!buildReady || busy || buildOk === true}
-                  onClick={handleForge}
-                >
-                  {busy ? '⏳ Forging…' : buildOk === true ? '✓ Done' : '⚒ Forge Engine'}
-                </button>
+                {buildOk === true ? (
+                  <button type="button" className="forge__btn forge__btn--forge" onClick={handleDeploy}>
+                    Continue to Deploy ▶
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="forge__btn forge__btn--forge"
+                    disabled={!buildReady || busy}
+                    onClick={handleForge}
+                  >
+                    {busy ? '⏳ Forging…' : '⚒ Forge Engine'}
+                  </button>
+                )}
               </div>
 
               <button
@@ -180,19 +228,18 @@ export default function ForgePage() {
 
               {/* Window Body */}
               <div className="forge__ios-body">
-                <aside className="forge__ios-sidebar">
+                <aside className="forge__ios-sidebar" style={{ width: sidebarW }}>
                   <div className="forge__ios-sidebar-header">EXPLORER</div>
                   <div className="forge__ios-sidebar-tree">
                     <FileTree tree={fileTree} selectedPath={selectedPath} onSelect={setSelectedPath} />
                   </div>
-
-                  {template?.chipConfig && activeConfig && (
-                    <ForgeChipSummary chipConfig={template.chipConfig} values={activeConfig} />
-                  )}
-                  {template?.configFields && activeConfig && !template?.chipConfig && (
-                    <ForgeConfigSummary fields={template.configFields} values={activeConfig} />
-                  )}
                 </aside>
+
+                {/* Drag handle — sidebar ↔ editor */}
+                <div
+                  className="forge__resize-handle forge__resize-handle--v"
+                  onMouseDown={e => onDragStart('sidebar', e)}
+                />
 
                 <div className="forge__ios-code-area">
                   <div className="forge__ios-editor">
@@ -207,12 +254,21 @@ export default function ForgePage() {
                       <div className="forge__ios-editor-placeholder">Select a file to edit</div>
                     )}
                   </div>
-                  <Console
-                    isOpen={showLogs}
-                    onToggle={() => setShowLogs(!showLogs)}
-                    logs={logs}
-                    explorerBaseUrl={explorerBaseUrl}
+
+                  {/* Drag handle — editor ↔ console */}
+                  <div
+                    className="forge__resize-handle forge__resize-handle--h"
+                    onMouseDown={e => onDragStart('console', e)}
                   />
+
+                  <div style={{ height: consoleH, flexShrink: 0 }}>
+                    <Console
+                      isOpen={showLogs}
+                      onToggle={() => setShowLogs(!showLogs)}
+                      logs={logs}
+                      explorerBaseUrl={explorerBaseUrl}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -221,14 +277,31 @@ export default function ForgePage() {
                 <button type="button" className="forge__btn forge__btn--back" onClick={() => setCodeOpen(false)}>
                   ← Engine View
                 </button>
-                <button
-                  type="button"
-                  className="forge__btn forge__btn--forge"
-                  disabled={!buildReady || busy || buildOk === true}
-                  onClick={handleForge}
-                >
-                  {busy ? '⏳ Forging…' : buildOk === true ? '✓ Done' : '⚒ Forge Engine'}
-                </button>
+
+                {/* Center info */}
+                <div className="forge__ios-bottombar-info">
+                  {template?.chipConfig && activeConfig && (
+                    <ForgeChipSummary chipConfig={template.chipConfig} values={activeConfig} />
+                  )}
+                  {template?.configFields && activeConfig && !template?.chipConfig && (
+                    <ForgeConfigSummary fields={template.configFields} values={activeConfig} />
+                  )}
+                </div>
+
+                {buildOk === true ? (
+                  <button type="button" className="forge__btn forge__btn--forge" onClick={handleDeploy}>
+                    Deploy ▶
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="forge__btn forge__btn--forge"
+                    disabled={!buildReady || busy}
+                    onClick={handleForge}
+                  >
+                    {busy ? '⏳ Forging…' : '⚒ Forge'}
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -249,38 +322,31 @@ function ForgeChipSummary({ chipConfig, values }: { chipConfig: ChipTemplateConf
   const chipMap = new Map<string, Chip>(chipConfig.chips.map(c => [c.id, c]));
 
   return (
-    <div className="forge__chip-summary">
-      <div className="forge__chip-summary-head">
-        <span className="forge__chip-summary-label">Chips</span>
-        <span className="forge__chip-summary-module">{moduleName}</span>
-      </div>
-      <div className="forge__chip-tags">
-        {enabledIds.map(id => {
-          const chip = chipMap.get(id);
-          if (!chip) return null;
-          const c = chipColor(chip.category);
-          return (
-            <span key={id} className="forge__chip-tag" style={{ color: c, borderColor: `${c}40`, background: `${c}10` }} title={chip.label}>
-              {id}
-            </span>
-          );
-        })}
-      </div>
+    <div className="forge__bottombar-chips">
+      <span className="forge__bottombar-chips-label">{moduleName}</span>
+      <span className="forge__bottombar-chips-sep">·</span>
+      {enabledIds.slice(0, 4).map(id => {
+        const chip = chipMap.get(id);
+        if (!chip) return null;
+        const c = chipColor(chip.category);
+        return (
+          <span key={id} className="forge__bottombar-tag" style={{ color: c }} title={chip.label}>
+            {id}
+          </span>
+        );
+      })}
+      {enabledIds.length > 4 && <span className="forge__bottombar-tag">+{enabledIds.length - 4}</span>}
     </div>
   );
 }
 
 function ForgeConfigSummary({ fields, values }: { fields: ConfigField[]; values: Record<string, unknown> }) {
   return (
-    <div className="forge__chip-summary">
-      <div className="forge__chip-summary-head">
-        <span className="forge__chip-summary-label">Config</span>
-      </div>
-      {fields.map(f => (
-        <div key={f.key} className="forge__config-row">
-          <span>{f.label}</span>
-          <span>{String(values[f.key] ?? f.defaultValue ?? '—')}</span>
-        </div>
+    <div className="forge__bottombar-chips">
+      {fields.slice(0, 3).map(f => (
+        <span key={f.key} className="forge__bottombar-tag" title={f.label}>
+          {f.label}: {String(values[f.key] ?? f.defaultValue ?? '—')}
+        </span>
       ))}
     </div>
   );

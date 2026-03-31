@@ -33,16 +33,20 @@ export function chipColor(category: string): string {
   return CATEGORY_COLORS[category] ?? '#778CA3';
 }
 
-/* Converge particle config — 16 particles from edges */
-const CONVERGE_COUNT = 16;
+/* Converge particle config — 32 particles from edges */
+const CONVERGE_COUNT = 32;
 const convergeParticles = Array.from({ length: CONVERGE_COUNT }, (_, i) => {
-  const angle = (360 / CONVERGE_COUNT) * i;
-  const dist = 1.0 + seeded(i, 99) * 0.4; // 1.0–1.4x engine radius
-  const delay = seeded(i, 42) * 1.8;
-  const dur = 1.2 + seeded(i, 77) * 0.8;
-  const brightness = 0.5 + seeded(i, 33) * 0.5;
-  return { angle, dist, delay, dur, brightness };
+  const angle = (360 / CONVERGE_COUNT) * i + seeded(i, 13) * 8;
+  const dist = 1.0 + seeded(i, 99) * 0.5;
+  const delay = seeded(i, 42) * 1.0;
+  const dur = 0.7 + seeded(i, 77) * 0.6;
+  const brightness = 0.6 + seeded(i, 33) * 0.4;
+  const size = 2 + seeded(i, 55) * 3;
+  return { angle, dist, delay, dur, brightness, size };
 });
+
+/* Per-chip orbit particles for comet trail effect */
+const CHIP_PARTICLES = 5;
 
 export function Engine({ state, chips = [], size = 380, className = '' }: EngineProps) {
   const slotCount = Math.max(chips.length, 6);
@@ -56,29 +60,50 @@ export function Engine({ state, chips = [], size = 380, className = '' }: Engine
     return arr;
   }, [chips, maxSlots]);
 
-  const orbitCount = state === 'forging' ? 10 : state === 'armed' ? 6 : 4;
-  const orbitDuration = state === 'forging' ? 2 : state === 'armed' ? 5 : 8;
+  const orbitCount = state === 'forging' ? 14 : state === 'armed' ? 8 : 6;
+  const orbitDuration = state === 'forging' ? 1.5 : state === 'armed' ? 4 : 6;
 
   const driftParticles = useMemo(() => {
     if (state === 'idle') return [];
     const out: Array<{ key: string; angle: number; color: string; dx: number; dy: number; delay: number; dur: number }> = [];
     chips.forEach((chip, ci) => {
-      const count = state === 'forging' ? 5 : 3;
+      const count = state === 'forging' ? 6 : 4;
       const angle = (360 / maxSlots) * ci - 90;
       for (let j = 0; j < count; j++) {
         out.push({
           key: `${chip.id}-${j}`,
           angle,
           color: chip.color,
-          dx: (seeded(ci, j * 2) - 0.5) * 50,
-          dy: (seeded(ci, j * 2 + 1) - 0.5) * 50,
+          dx: (seeded(ci, j * 2) - 0.5) * 60,
+          dy: (seeded(ci, j * 2 + 1) - 0.5) * 60,
           delay: seeded(ci + 10, j) * 2,
-          dur: 1.5 + seeded(ci, j + 50) * 1.5,
+          dur: 1.2 + seeded(ci, j + 50) * 1.2,
         });
       }
     });
     return out;
   }, [chips, state, maxSlots]);
+
+  /* Per-chip trailing particles */
+  const chipTrailParticles = useMemo(() => {
+    if (chips.length === 0) return [];
+    const out: Array<{ key: string; slotIndex: number; angle: number; color: string; offset: number; size: number; opacity: number }> = [];
+    chips.forEach((chip, ci) => {
+      const slotAngle = (360 / maxSlots) * ci - 90;
+      for (let j = 0; j < CHIP_PARTICLES; j++) {
+        out.push({
+          key: `trail-${chip.id}-${j}`,
+          slotIndex: ci,
+          angle: slotAngle,
+          color: chip.color,
+          offset: (j + 1) * 12 + seeded(ci, j + 80) * 6,
+          size: 3 + (CHIP_PARTICLES - j) * 1,
+          opacity: 0.7 - j * 0.12,
+        });
+      }
+    });
+    return out;
+  }, [chips, maxSlots]);
 
   const stateLabel: Record<EngineState, string> = {
     idle: 'IDLE', armed: 'READY', forging: 'FORGING', done: 'FORGED', error: 'ERROR',
@@ -101,6 +126,7 @@ export function Engine({ state, chips = [], size = 380, className = '' }: Engine
               '--cvg-delay': `${p.delay}s`,
               '--cvg-dur': `${p.dur}s`,
               '--cvg-bright': `${p.brightness}`,
+              '--cvg-size': `${p.size}px`,
             } as React.CSSProperties}
           />
         ))}
@@ -131,7 +157,7 @@ export function Engine({ state, chips = [], size = 380, className = '' }: Engine
       {/* Inner counter-rotating ring */}
       <div className="engine__ring engine__ring--inner" />
 
-      {/* Chip slots */}
+      {/* Chip slots (rotating container for comet effect) */}
       <div className="engine__slots">
         {slots.map(({ angle, chip }, i) => (
           <div
@@ -145,6 +171,20 @@ export function Engine({ state, chips = [], size = 380, className = '' }: Engine
           >
             {chip && <div className="engine__slot-glow" />}
           </div>
+        ))}
+        {/* Chip trailing particles */}
+        {chipTrailParticles.map(p => (
+          <span
+            key={p.key}
+            className="engine__chip-trail"
+            style={{
+              '--trail-angle': `${p.angle}deg`,
+              '--trail-color': p.color,
+              '--trail-offset': `${p.offset}deg`,
+              '--trail-size': `${p.size}px`,
+              '--trail-opacity': `${p.opacity}`,
+            } as React.CSSProperties}
+          />
         ))}
       </div>
 

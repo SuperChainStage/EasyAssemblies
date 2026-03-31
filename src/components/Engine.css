@@ -15,7 +15,7 @@
   transition: filter 0.4s;
 }
 
-/* ══ Converge Particles (Hover "聚气") ══ */
+/* ══ Converge Particles (Hover gather effect) ══ */
 .engine__converge-layer {
   position: absolute;
   inset: 0;
@@ -27,13 +27,13 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 3px;
-  height: 3px;
-  margin: -1.5px;
+  width: var(--cvg-size, 3px);
+  height: var(--cvg-size, 3px);
+  margin: calc(var(--cvg-size, 3px) / -2);
   border-radius: 50%;
   background: var(--ol);
   opacity: 0;
-  box-shadow: 0 0 6px var(--o), 0 0 12px rgba(232,106,16,0.15);
+  box-shadow: 0 0 8px var(--o), 0 0 16px rgba(232,106,16,0.2);
   transform:
     rotate(var(--cvg-angle))
     translateX(calc(var(--engine-size) * 0.6 * var(--cvg-dist)))
@@ -42,9 +42,10 @@
 }
 
 /* Show + animate converge dots on idle hover */
-.engine--idle:hover .engine__converge-dot {
+.engine--idle:hover .engine__converge-dot,
+.engine--forging .engine__converge-dot {
   opacity: var(--cvg-bright, 0.6);
-  animation: converge var(--cvg-dur, 1.5s) ease-in var(--cvg-delay, 0s) infinite;
+  animation: converge var(--cvg-dur, 1s) ease-in var(--cvg-delay, 0s) infinite;
 }
 
 @keyframes converge {
@@ -56,19 +57,15 @@
       rotate(calc(-1 * var(--cvg-angle)))
       scale(1.2);
   }
-  15% {
-    opacity: var(--cvg-bright, 0.7);
-  }
-  85% {
-    opacity: var(--cvg-bright, 0.5);
-  }
+  20% { opacity: var(--cvg-bright, 0.7); }
+  80% { opacity: var(--cvg-bright, 0.5); }
   100% {
     opacity: 0;
     transform:
       rotate(var(--cvg-angle))
       translateX(calc(var(--engine-size) * 0.04))
       rotate(calc(-1 * var(--cvg-angle)))
-      scale(0.2);
+      scale(0.15);
   }
 }
 
@@ -77,29 +74,29 @@
   position: absolute;
   inset: -30%;
   border-radius: 50%;
-  transition: all 1s;
+  transition: all 0.8s;
   pointer-events: none;
 }
 
-/* IDLE default — already glowing (was previously hover-only) */
+/* IDLE default — warm orange glow, brighter than before */
 .engine--idle .engine__ambient {
-  background: radial-gradient(circle, rgba(232,106,16,0.08) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(232,106,16,0.14) 0%, rgba(232,106,16,0.04) 40%, transparent 65%);
 }
 .engine--idle:hover .engine__ambient {
-  background: radial-gradient(circle, rgba(232,106,16,0.16) 0%, rgba(232,106,16,0.04) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(232,106,16,0.22) 0%, rgba(232,106,16,0.08) 40%, transparent 65%);
 }
 .engine--armed .engine__ambient {
-  background: radial-gradient(circle, rgba(232,106,16,0.12) 0%, rgba(232,106,16,0.03) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(232,106,16,0.16) 0%, rgba(232,106,16,0.05) 40%, transparent 65%);
 }
 .engine--forging .engine__ambient {
-  background: radial-gradient(circle, rgba(255,200,100,0.18) 0%, rgba(232,106,16,0.06) 45%, transparent 70%);
-  animation: ambient-throb 0.6s ease-in-out infinite alternate;
+  background: radial-gradient(circle, rgba(255,200,100,0.25) 0%, rgba(232,106,16,0.1) 40%, transparent 65%);
+  animation: ambient-throb 0.4s ease-in-out infinite alternate;
 }
 .engine--done .engine__ambient {
-  background: radial-gradient(circle, rgba(38,222,129,0.1) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(38,222,129,0.14) 0%, transparent 60%);
 }
 .engine--error .engine__ambient {
-  background: radial-gradient(circle, rgba(255,71,87,0.12) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(255,71,87,0.16) 0%, transparent 60%);
 }
 
 /* ── Outer Metallic Ring ── */
@@ -126,49 +123,57 @@
   mask: radial-gradient(transparent calc(50% - 7px), #000 calc(50% - 6px), #000 calc(50% + 1px), transparent calc(50% + 2px));
 }
 
-/* IDLE default — ticks + ring already lit orange */
+/* IDLE default — ticks + ring bright orange */
 .engine--idle .engine__ring--outer {
-  border-color: rgba(232,106,16,0.3);
+  border-color: rgba(232,106,16,0.4);
   box-shadow:
     inset 0 2px 0 rgba(255,255,255,0.08),
-    0 0 24px rgba(232,106,16,0.12),
-    0 0 50px rgba(232,106,16,0.04);
+    0 0 30px rgba(232,106,16,0.15),
+    0 0 60px rgba(232,106,16,0.05);
 }
 .engine--idle .engine__ticks {
   background: repeating-conic-gradient(
     from 0deg,
-    rgba(232,106,16,0.15) 0deg 1.2deg,
+    rgba(232,106,16,0.2) 0deg 1.2deg,
     transparent 1.2deg 10deg
   );
 }
 
 /* IDLE hover — intensified */
 .engine--idle:hover .engine__ring--outer {
-  border-color: rgba(232,106,16,0.5);
+  border-color: rgba(232,106,16,0.6);
   box-shadow:
     inset 0 2px 0 rgba(255,255,255,0.1),
-    0 0 40px rgba(232,106,16,0.2),
-    0 0 80px rgba(232,106,16,0.06);
+    0 0 50px rgba(232,106,16,0.25),
+    0 0 100px rgba(232,106,16,0.08);
 }
 .engine--idle:hover .engine__ticks {
   background: repeating-conic-gradient(
     from 0deg,
-    rgba(232,106,16,0.3) 0deg 1.2deg,
+    rgba(232,106,16,0.4) 0deg 1.2deg,
     transparent 1.2deg 10deg
   );
 }
 
 .engine--armed .engine__ring--outer,
 .engine--forging .engine__ring--outer {
-  border-color: rgba(232,106,16,0.45);
+  border-color: rgba(232,106,16,0.5);
   box-shadow:
     inset 0 2px 0 rgba(255,255,255,0.08),
-    0 0 30px rgba(232,106,16,0.12),
-    0 0 60px rgba(232,106,16,0.04);
+    0 0 35px rgba(232,106,16,0.18),
+    0 0 70px rgba(232,106,16,0.06);
+}
+.engine--armed .engine__ticks,
+.engine--forging .engine__ticks {
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(232,106,16,0.3) 0deg 1.2deg,
+    transparent 1.2deg 10deg
+  );
 }
 .engine--done .engine__ring--outer {
   border-color: rgba(38,222,129,0.45);
-  box-shadow: 0 0 30px rgba(38,222,129,0.12);
+  box-shadow: 0 0 30px rgba(38,222,129,0.15);
 }
 .engine--error .engine__ring--outer {
   border-color: rgba(255,71,87,0.5);
@@ -180,17 +185,17 @@
   position: absolute;
   inset: 12%;
   border-radius: 50%;
-  border: 1.5px dashed rgba(232,106,16,0.15);
-  animation: spin 14s linear infinite;
+  border: 1.5px dashed rgba(232,106,16,0.2);
+  animation: spin 10s linear infinite;
   transition: border-color 0.6s;
 }
 .engine--armed .engine__ring--mid {
-  border-color: rgba(232,106,16,0.3);
-  animation-duration: 6s;
+  border-color: rgba(232,106,16,0.35);
+  animation-duration: 5s;
 }
 .engine--forging .engine__ring--mid {
-  border-color: rgba(255,200,100,0.4);
-  animation-duration: 1.2s;
+  border-color: rgba(255,200,100,0.5);
+  animation-duration: 0.8s;
 }
 
 /* Orbital dots */
@@ -203,15 +208,15 @@
   margin: -1.5px;
   border-radius: 50%;
   background: var(--ol);
-  box-shadow: 0 0 6px var(--o), 0 0 12px rgba(232,106,16,0.2);
-  animation: orbit var(--orb-dur, 8s) linear infinite;
+  box-shadow: 0 0 8px var(--o), 0 0 14px rgba(232,106,16,0.25);
+  animation: orbit var(--orb-dur, 6s) linear infinite;
   animation-delay: var(--orb-delay, 0s);
 }
 .engine--forging .engine__orbit-dot {
-  width: 4px;
-  height: 4px;
-  margin: -2px;
-  box-shadow: 0 0 8px var(--ol), 0 0 16px rgba(255,200,100,0.3);
+  width: 5px;
+  height: 5px;
+  margin: -2.5px;
+  box-shadow: 0 0 10px var(--ol), 0 0 20px rgba(255,200,100,0.4);
 }
 
 /* ── Inner Ring (counter-rotate) ── */
@@ -219,56 +224,86 @@
   position: absolute;
   inset: 26%;
   border-radius: 50%;
-  border: 1px solid rgba(232,106,16,0.08);
-  animation: spin-rev 22s linear infinite;
+  border: 1px solid rgba(232,106,16,0.12);
+  animation: spin-rev 16s linear infinite;
   transition: border-color 0.6s;
 }
 .engine--armed .engine__ring--inner {
-  border-color: rgba(232,106,16,0.15);
-  animation-duration: 11s;
+  border-color: rgba(232,106,16,0.2);
+  animation-duration: 8s;
 }
 .engine--forging .engine__ring--inner {
-  border-color: rgba(255,200,100,0.2);
-  animation-duration: 2s;
+  border-color: rgba(255,200,100,0.3);
+  animation-duration: 1.5s;
 }
 
-/* ── Chip Slots ── */
+/* ── Chip Slots (rotating container for comet effect) ── */
 .engine__slots {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  animation: spin 50s linear infinite;
 }
+.engine--armed .engine__slots { animation-duration: 30s; }
+.engine--forging .engine__slots { animation-duration: 4s; }
+.engine--done .engine__slots,
+.engine--error .engine__slots { animation-duration: 50s; }
 
 .engine__slot {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 24px;
-  height: 24px;
-  margin: -12px;
+  width: 20px;
+  height: 20px;
+  margin: -10px;
   border-radius: 50%;
   transform: rotate(var(--slot-angle)) translateX(var(--slot-orbit)) rotate(calc(-1 * var(--slot-angle)));
-  border: 1.5px dashed rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.015);
+  border: 1.5px dashed rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.01);
   transition: all 0.5s var(--ease-out-expo);
 }
 
 .engine__slot--filled {
-  border-style: solid;
-  border-color: var(--chip-color);
-  background: var(--chip-color);
-  box-shadow: 0 0 10px var(--chip-color), 0 0 20px rgba(0,0,0,0.3);
-  animation: slot-in 0.6s var(--ease-out-expo) both;
+  border: none;
+  background: radial-gradient(circle, var(--chip-color) 30%, transparent 70%);
+  width: 18px;
+  height: 18px;
+  margin: -9px;
+  box-shadow:
+    0 0 8px var(--chip-color),
+    0 0 16px var(--chip-color),
+    0 0 28px rgba(0,0,0,0.2);
+  animation: slot-in 0.6s var(--ease-out-expo) both, chip-flicker 3s ease-in-out infinite;
 }
 
 .engine__slot-glow {
   position: absolute;
-  inset: -6px;
+  inset: -8px;
   border-radius: 50%;
   background: var(--chip-color);
-  filter: blur(10px);
-  opacity: 0.35;
-  animation: glow-pulse 2.5s ease-in-out infinite;
+  filter: blur(12px);
+  opacity: 0.3;
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Chip comet trail particles */
+.engine__chip-trail {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--trail-size, 3px);
+  height: var(--trail-size, 3px);
+  margin: calc(var(--trail-size, 3px) / -2);
+  border-radius: 50%;
+  background: var(--trail-color);
+  box-shadow: 0 0 4px var(--trail-color);
+  opacity: var(--trail-opacity, 0.5);
+  transform:
+    rotate(calc(var(--trail-angle) - var(--trail-offset)))
+    translateX(var(--slot-orbit))
+    rotate(calc(-1 * (var(--trail-angle) - var(--trail-offset))));
+  filter: blur(1px);
+  pointer-events: none;
 }
 
 /* ── Drift Particles ── */
@@ -280,7 +315,7 @@
   height: 3px;
   border-radius: 50%;
   background: var(--dc);
-  box-shadow: 0 0 5px var(--dc);
+  box-shadow: 0 0 6px var(--dc);
   transform: rotate(var(--da)) translateX(var(--slot-orbit));
   animation: drift var(--ddur, 2s) ease-out infinite;
   animation-delay: var(--dd, 0s);
@@ -306,28 +341,28 @@
   position: absolute;
   inset: -20%;
   border-radius: 50%;
-  animation: breathe 3.5s ease-in-out infinite;
+  animation: breathe 3s ease-in-out infinite;
   transition: background 0.6s;
 }
 
-/* IDLE default — core already warm */
+/* IDLE default — core warm glow */
 .engine--idle .engine__core-pulse {
-  background: radial-gradient(circle, rgba(232,106,16,0.15) 0%, rgba(232,106,16,0.04) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(232,106,16,0.2) 0%, rgba(232,106,16,0.06) 50%, transparent 70%);
 }
 .engine--armed .engine__core-pulse {
-  background: radial-gradient(circle, rgba(232,106,16,0.25) 0%, rgba(232,106,16,0.08) 50%, transparent 70%);
-  animation-duration: 1.8s;
+  background: radial-gradient(circle, rgba(232,106,16,0.28) 0%, rgba(232,106,16,0.1) 50%, transparent 70%);
+  animation-duration: 1.6s;
 }
 .engine--forging .engine__core-pulse {
-  background: radial-gradient(circle, rgba(255,220,150,0.35) 0%, rgba(232,106,16,0.12) 50%, transparent 70%);
-  animation-duration: 0.4s;
+  background: radial-gradient(circle, rgba(255,220,150,0.4) 0%, rgba(232,106,16,0.15) 50%, transparent 70%);
+  animation-duration: 0.3s;
 }
 .engine--done .engine__core-pulse {
-  background: radial-gradient(circle, rgba(38,222,129,0.25) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(38,222,129,0.28) 0%, transparent 65%);
   animation-duration: 3s;
 }
 .engine--error .engine__core-pulse {
-  background: radial-gradient(circle, rgba(255,71,87,0.25) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(255,71,87,0.28) 0%, transparent 65%);
   animation: error-flash 0.4s ease-in-out infinite alternate;
 }
 
@@ -337,44 +372,44 @@
   height: 72%;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 35%, #171B28 0%, #0C0E14 100%);
-  border: 1px solid rgba(232,106,16,0.2);
+  border: 1px solid rgba(232,106,16,0.25);
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: inset 0 0 30px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.04);
   transition: border-color 0.6s;
 }
-.engine--armed .engine__core-inner { border-color: rgba(232,106,16,0.35); }
-.engine--done .engine__core-inner  { border-color: rgba(38,222,129,0.35); }
-.engine--error .engine__core-inner { border-color: rgba(255,71,87,0.35); }
+.engine--armed .engine__core-inner { border-color: rgba(232,106,16,0.4); }
+.engine--done .engine__core-inner  { border-color: rgba(38,222,129,0.4); }
+.engine--error .engine__core-inner { border-color: rgba(255,71,87,0.4); }
 
-/* IDLE default — label already glows orange */
+/* IDLE default — label glows orange */
 .engine__core-label {
   font-family: 'Orbitron', sans-serif;
-  font-size: calc(var(--engine-size) * 0.03);
+  font-size: calc(var(--engine-size) * 0.032);
   font-weight: 700;
   letter-spacing: 3px;
   color: var(--ol);
-  text-shadow: 0 0 8px rgba(232,106,16,0.4);
+  text-shadow: 0 0 10px rgba(232,106,16,0.5);
   text-transform: uppercase;
   transition: color 0.6s, text-shadow 0.6s;
   user-select: none;
 }
 .engine--idle:hover .engine__core-label {
   color: #FFB06B;
-  text-shadow: 0 0 14px rgba(232,106,16,0.6);
+  text-shadow: 0 0 16px rgba(232,106,16,0.7);
 }
 .engine--armed .engine__core-label {
   color: var(--ol);
-  text-shadow: 0 0 12px rgba(232,106,16,0.5);
+  text-shadow: 0 0 14px rgba(232,106,16,0.6);
 }
 .engine--forging .engine__core-label {
   color: #FFF5E6;
-  text-shadow: 0 0 16px rgba(255,200,100,0.6);
+  text-shadow: 0 0 20px rgba(255,200,100,0.7);
 }
 .engine--done .engine__core-label {
   color: #26DE81;
-  text-shadow: 0 0 12px rgba(38,222,129,0.5);
+  text-shadow: 0 0 14px rgba(38,222,129,0.6);
 }
 .engine--error .engine__core-label {
   color: #FF4757;
@@ -397,12 +432,12 @@
   width: 50%;
   height: 2px;
   transform-origin: left center;
-  background: linear-gradient(90deg, transparent 0%, rgba(232,106,16,0.3) 40%, rgba(232,106,16,0.6) 80%, transparent 100%);
-  animation: spin 5s linear infinite;
+  background: linear-gradient(90deg, transparent 0%, rgba(232,106,16,0.35) 40%, rgba(232,106,16,0.7) 80%, transparent 100%);
+  animation: spin 4s linear infinite;
 }
 .engine--forging .engine__scanner::before {
-  background: linear-gradient(90deg, transparent 0%, rgba(255,200,100,0.4) 40%, rgba(255,200,100,0.8) 80%, transparent 100%);
-  animation-duration: 0.8s;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,200,100,0.5) 40%, rgba(255,200,100,0.9) 80%, transparent 100%);
+  animation-duration: 0.6s;
 }
 
 /* ═══ KEYFRAMES ═══ */
@@ -422,12 +457,16 @@
   to   { transform: rotate(360deg) translateX(calc(var(--engine-size) * 0.35)) rotate(-360deg); }
 }
 @keyframes drift {
-  0%   { opacity: 0.7; transform: rotate(var(--da)) translateX(var(--slot-orbit)) translate(0,0) scale(1); }
-  100% { opacity: 0;   transform: rotate(var(--da)) translateX(var(--slot-orbit)) translate(var(--dx),var(--dy)) scale(0.2); }
+  0%   { opacity: 0.8; transform: rotate(var(--da)) translateX(var(--slot-orbit)) translate(0,0) scale(1); }
+  100% { opacity: 0;   transform: rotate(var(--da)) translateX(var(--slot-orbit)) translate(var(--dx),var(--dy)) scale(0.15); }
 }
 @keyframes slot-in {
   0%   { transform: rotate(var(--slot-angle)) translateX(calc(var(--slot-orbit) + 60px)) rotate(calc(-1 * var(--slot-angle))) scale(0.3); opacity: 0; }
   100% { transform: rotate(var(--slot-angle)) translateX(var(--slot-orbit)) rotate(calc(-1 * var(--slot-angle))) scale(1); opacity: 1; }
+}
+@keyframes chip-flicker {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
 }
 @keyframes ambient-throb {
   from { opacity: 0.7; transform: scale(0.98); }
@@ -447,5 +486,6 @@
   .engine__core-pulse,
   .engine__slot-glow,
   .engine__drift,
-  .engine__converge-dot { animation: none !important; }
+  .engine__converge-dot,
+  .engine__slots { animation: none !important; }
 }

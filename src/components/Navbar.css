@@ -74,29 +74,7 @@
   color: var(--eve-orange-light);
 }
 
-/* ── Network Select ── */
-.ev-navbar__right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 
-.ev-navbar__network {
-  height: 28px;
-  padding: 0 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.04);
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-family: var(--font-mono);
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.15s;
-}
-.ev-navbar__network:focus {
-  border-color: var(--eve-orange);
-}
 
 /* Back button */
 .ev-navbar__back-btn {
