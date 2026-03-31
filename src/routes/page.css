@@ -18,7 +18,7 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding-top: 28px;
+  padding-top: 52px;
   flex-shrink: 0;
   z-index: 2;
   position: relative;
@@ -39,9 +39,9 @@
 .home__title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 38px;
   font-weight: 700;
-  letter-spacing: 4px;
+  letter-spacing: 5px;
   text-transform: uppercase;
   /* Reflective metallic gradient text */
   background: linear-gradient(
@@ -73,7 +73,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 40px;
+  gap: 20px;
   padding: 0 48px 0 32px;
   position: relative;
   z-index: 1;
@@ -224,15 +224,18 @@
   flex-direction: column;
   gap: 10px;
   animation: fade-in-up 0.35s var(--ease-out-expo) both;
+  overflow: hidden;
+  max-height: 100%;
+}
+/* Delayed overflow: only show scrollbar after entry animation completes */
+.home__templates.home__templates--scrollable {
   overflow-y: auto;
   overflow-x: hidden;
-  max-height: 100%;
   scrollbar-width: thin;
 }
-/* Hide scrollbar during entry animation to prevent flash */
-.home__templates::-webkit-scrollbar { width: 4px; }
-.home__templates::-webkit-scrollbar-track { background: transparent; }
-.home__templates::-webkit-scrollbar-thumb { background: rgba(232,106,16,0.1); border-radius: 2px; }
+.home__templates--scrollable::-webkit-scrollbar { width: 4px; }
+.home__templates--scrollable::-webkit-scrollbar-track { background: transparent; }
+.home__templates--scrollable::-webkit-scrollbar-thumb { background: rgba(232,106,16,0.15); border-radius: 2px; }
 
 .home__templates-back {
   background: none;
@@ -497,15 +500,15 @@
     overflow-x: hidden;
   }
   .home__header {
-    padding-top: 20px;
+    padding-top: 28px;
   }
   .home__title {
-    font-size: 22px;
+    font-size: 26px;
     letter-spacing: 3px;
   }
   .home__body {
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
     padding: 8px 20px 20px;
   }
   .home__engine-area .engine {
@@ -520,7 +523,7 @@
   }
 }
 @media (max-width: 600px) {
-  .home__title { font-size: 18px; }
+  .home__title { font-size: 20px; }
   .home__engine-area .engine { --engine-size: 220px !important; }
   .glass-card__title { font-size: 13px; letter-spacing: 2px; }
 }

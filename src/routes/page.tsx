@@ -1,5 +1,5 @@
 import { useNavigate } from '@modern-js/runtime/router';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { GATE_TEMPLATES, SSU_TEMPLATES, TURRET_TEMPLATES } from '@/templates';
 import type { AssemblyTemplate } from '@/templates/types';
 import type { Chip } from '@/templates/chip-types';
@@ -82,6 +82,17 @@ export default function IndexPage() {
   const engineState: EngineState = engineChips.length > 0 || configResult ? 'armed' : 'idle';
   const isConfigured = !!selectedTemplate;
   const activeGroup = COMPONENT_GROUPS.find(g => g.key === selectedGroup);
+
+  /* Delay enabling scroll on template list to prevent scrollbar flash */
+  const [tplScrollable, setTplScrollable] = useState(false);
+  const tplTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => {
+    if (selectedGroup) {
+      setTplScrollable(false);
+      tplTimerRef.current = setTimeout(() => setTplScrollable(true), 400);
+    }
+    return () => { if (tplTimerRef.current) clearTimeout(tplTimerRef.current); };
+  }, [selectedGroup]);
 
   /* Handlers */
   const handleTemplateClick = useCallback((tpl: AssemblyTemplate) => {
@@ -201,7 +212,7 @@ export default function IndexPage() {
               </div>
             ) : (
               /* ─── Level 2: Template Selection ─── */
-              <div className="home__templates" style={{ '--gc': activeGroup?.color } as React.CSSProperties}>
+              <div className={`home__templates${tplScrollable ? ' home__templates--scrollable' : ''}`} style={{ '--gc': activeGroup?.color } as React.CSSProperties}>
                 <button
                   type="button"
                   className="home__templates-back"

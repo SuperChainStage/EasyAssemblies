@@ -164,23 +164,18 @@ export default function DeployPage() {
                   explorerBaseUrl={explorerBaseUrl}
                 />
               )}
+              {stage === 'complete' && (
+                <button
+                  type="button"
+                  className="deploy__home-btn"
+                  onClick={() => navigate('/')}
+                >
+                  ⟳ Start New Forge
+                </button>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Build log summary (collapsible) */}
-        {logs.length > 0 && (
-          <details className="deploy__logs-details">
-            <summary className="deploy__logs-summary">Build Log ({logs.length} entries)</summary>
-            <div className="deploy__logs-content">
-              {logs.map((l, i) => (
-                <div key={i} className="deploy__log-line">
-                  {l}
-                </div>
-              ))}
-            </div>
-          </details>
-        )}
       </div>
 
       <StatusBar

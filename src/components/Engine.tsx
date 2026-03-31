@@ -23,10 +23,10 @@ function seeded(a: number, b: number): number {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  exclude: '#FF4757', access: '#26DE81', weight: '#45AAF2',
-  payment: '#FFC312', revenue: '#A55EEA', item: '#FF6348',
-  config: '#778CA3', pricing: '#2BCBBA', stock: '#0ABDE3',
-  swap: '#FD79A8', airdrop: '#A3CB38',
+  exclude: '#FF4757', access: '#00F5D4', weight: '#00BBF9',
+  payment: '#FEE440', revenue: '#9B5DE5', item: '#F15BB5',
+  config: '#8AC4FF', pricing: '#00F5D4', stock: '#00BBF9',
+  swap: '#F15BB5', airdrop: '#FEE440',
 };
 
 export function chipColor(category: string): string {
@@ -45,8 +45,17 @@ const convergeParticles = Array.from({ length: CONVERGE_COUNT }, (_, i) => {
   return { angle, dist, delay, dur, brightness, size };
 });
 
-/* Per-chip orbit particles for comet trail effect */
-const CHIP_PARTICLES = 5;
+/* Per-chip trailing particles — REMOVED, chips are now embedded in ring */
+
+/* Victory burst config — radial particles on forge complete */
+const BURST_COUNT = 24;
+const burstParticles = Array.from({ length: BURST_COUNT }, (_, i) => {
+  const angle = (360 / BURST_COUNT) * i + seeded(i, 17) * 10;
+  const delay = seeded(i, 31) * 0.3;
+  const dur = 0.8 + seeded(i, 61) * 0.8;
+  const dist = 0.5 + seeded(i, 73) * 0.5;
+  return { angle, delay, dur, dist };
+});
 
 export function Engine({ state, chips = [], size = 380, className = '' }: EngineProps) {
   const slotCount = Math.max(chips.length, 6);
@@ -83,27 +92,6 @@ export function Engine({ state, chips = [], size = 380, className = '' }: Engine
     });
     return out;
   }, [chips, state, maxSlots]);
-
-  /* Per-chip trailing particles */
-  const chipTrailParticles = useMemo(() => {
-    if (chips.length === 0) return [];
-    const out: Array<{ key: string; slotIndex: number; angle: number; color: string; offset: number; size: number; opacity: number }> = [];
-    chips.forEach((chip, ci) => {
-      const slotAngle = (360 / maxSlots) * ci - 90;
-      for (let j = 0; j < CHIP_PARTICLES; j++) {
-        out.push({
-          key: `trail-${chip.id}-${j}`,
-          slotIndex: ci,
-          angle: slotAngle,
-          color: chip.color,
-          offset: (j + 1) * 12 + seeded(ci, j + 80) * 6,
-          size: 3 + (CHIP_PARTICLES - j) * 1,
-          opacity: 0.7 - j * 0.12,
-        });
-      }
-    });
-    return out;
-  }, [chips, maxSlots]);
 
   const stateLabel: Record<EngineState, string> = {
     idle: 'IDLE', armed: 'READY', forging: 'FORGING', done: 'FORGED', error: 'ERROR',
@@ -157,7 +145,7 @@ export function Engine({ state, chips = [], size = 380, className = '' }: Engine
       {/* Inner counter-rotating ring */}
       <div className="engine__ring engine__ring--inner" />
 
-      {/* Chip slots (rotating container for comet effect) */}
+      {/* Chip slots (rotating container) */}
       <div className="engine__slots">
         {slots.map(({ angle, chip }, i) => (
           <div
@@ -172,21 +160,25 @@ export function Engine({ state, chips = [], size = 380, className = '' }: Engine
             {chip && <div className="engine__slot-glow" />}
           </div>
         ))}
-        {/* Chip trailing particles */}
-        {chipTrailParticles.map(p => (
-          <span
-            key={p.key}
-            className="engine__chip-trail"
-            style={{
-              '--trail-angle': `${p.angle}deg`,
-              '--trail-color': p.color,
-              '--trail-offset': `${p.offset}deg`,
-              '--trail-size': `${p.size}px`,
-              '--trail-opacity': `${p.opacity}`,
-            } as React.CSSProperties}
-          />
-        ))}
       </div>
+
+      {/* Victory burst particles (done state only) */}
+      {state === 'done' && (
+        <div className="engine__burst-layer" aria-hidden="true">
+          {burstParticles.map((p, i) => (
+            <span
+              key={`burst-${i}`}
+              className="engine__burst-dot"
+              style={{
+                '--burst-angle': `${p.angle}deg`,
+                '--burst-delay': `${p.delay}s`,
+                '--burst-dur': `${p.dur}s`,
+                '--burst-dist': `${p.dist}`,
+              } as React.CSSProperties}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Drift particles from filled slots */}
       {driftParticles.map(p => (

@@ -164,7 +164,7 @@ export default function ForgePage() {
               <h2 className="forge__page-title">ASSEMBLY FORGE</h2>
               <p className="forge__page-desc">Compile and forge your Smart Assembly engine</p>
 
-              <Engine state={engineState} chips={engineChips} size={300} />
+              <Engine state={engineState} chips={engineChips} size={360} />
 
               <div className="forge__chip-list">
                 <span className="forge__chip-list-label">Chips:</span>
