@@ -1,0 +1,107 @@
+{
+  "routeAssets": {
+    "deploy/page": {
+      "chunkIds": [
+        "643",
+        "153",
+        "539",
+        "925",
+        "897"
+      ],
+      "assets": [
+        "./static/js/async/643.3a355fd429.js",
+        "./static/js/async/153.ab4021d3ff.js",
+        "./static/js/async/539.71dfb62f70.js",
+        "./static/js/async/925.3f57ea6524.js",
+        "./static/css/async/deploy/page.1c744ca4a6.css",
+        "./static/js/async/deploy/page.64727ea767.js"
+      ],
+      "referenceCssAssets": [
+        "./static/css/async/deploy/page.1c744ca4a6.css"
+      ]
+    },
+    "forge/page": {
+      "chunkIds": [
+        "643",
+        "722",
+        "153",
+        "539",
+        "530",
+        "551"
+      ],
+      "assets": [
+        "./static/js/async/643.3a355fd429.js",
+        "./static/js/async/722.12753f32b2.js",
+        "./static/js/async/153.ab4021d3ff.js",
+        "./static/js/async/539.71dfb62f70.js",
+        "./static/js/async/530.29515fd626.js",
+        "./static/css/async/forge/page.02d82842ce.css",
+        "./static/js/async/forge/page.716d72bde9.js"
+      ],
+      "referenceCssAssets": [
+        "./static/css/async/forge/page.02d82842ce.css"
+      ]
+    },
+    "index": {
+      "chunkIds": [
+        "408",
+        "783",
+        "535",
+        "493",
+        "394",
+        "410"
+      ],
+      "assets": [
+        "./static/js/lib-react.2d2c57f0e0.js",
+        "./static/js/lib-router.bb64cbb1a7.js",
+        "./static/js/lib-polyfill.15abbb0b84.js",
+        "./static/css/394.1b715ab5b1.css",
+        "./static/js/394.aa12d6d2e0.js",
+        "./static/css/index.d5cbb1259a.css",
+        "./static/js/index.27f8044991.js"
+      ],
+      "referenceCssAssets": [
+        "./static/css/394.1b715ab5b1.css",
+        "./static/css/index.d5cbb1259a.css"
+      ]
+    },
+    "page": {
+      "chunkIds": [
+        "153",
+        "807"
+      ],
+      "assets": [
+        "./static/js/async/153.ab4021d3ff.js",
+        "./static/js/async/page.1b581d3fc7.js",
+        "./static/css/async/page.6f41bc40be.css"
+      ],
+      "referenceCssAssets": [
+        "./static/css/async/page.6f41bc40be.css"
+      ]
+    },
+    "playground/page": {
+      "chunkIds": [
+        "643",
+        "722",
+        "153",
+        "539",
+        "925",
+        "530",
+        "723"
+      ],
+      "assets": [
+        "./static/js/async/643.3a355fd429.js",
+        "./static/js/async/722.12753f32b2.js",
+        "./static/js/async/153.ab4021d3ff.js",
+        "./static/js/async/539.71dfb62f70.js",
+        "./static/js/async/925.3f57ea6524.js",
+        "./static/js/async/530.29515fd626.js",
+        "./static/js/async/playground/page.7c6fa0fb5d.js",
+        "./static/css/async/playground/page.3bb9e0c0fe.css"
+      ],
+      "referenceCssAssets": [
+        "./static/css/async/playground/page.3bb9e0c0fe.css"
+      ]
+    }
+  }
+}
