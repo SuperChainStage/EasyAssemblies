@@ -331,7 +331,7 @@ The chip system uses a **radio + checkbox** model: some chip categories are mutu
 
 ## License
 
-MIT
+Apache-2.0
 
 ---
 
